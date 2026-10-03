@@ -1,0 +1,9 @@
+{
+  "name": "loop-player",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web app per ascoltare i propri brani in loop, anche a schermo spento",
+  "scripts": {
+    "dev": "node dev-server.js 8080"
+  }
+}

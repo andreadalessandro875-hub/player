@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Loop">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="styles.css">
+<title>Loop Player</title>
+</head>
+<body>
+<main id="app">
+
+  <section id="view-library" class="view active" aria-label="Libreria">
+    <header class="head">
+      <h1>Libreria</h1>
+      <button id="btn-edit" class="link">Modifica</button>
+    </header>
+    <label class="search">
+      <span data-icon="search"></span>
+      <input id="search" type="search" placeholder="Cerca nei tuoi brani" aria-label="Cerca nei tuoi brani">
+    </label>
+    <div id="track-list" class="list"></div>
+    <div id="empty" class="empty" hidden>
+      <p>Nessun brano nella libreria.</p>
+      <button class="btn primary" data-go="sync">Aggiungi brani</button>
+    </div>
+  </section>
+
+  <section id="view-sync" class="view" aria-label="Sincronizza">
+    <header class="head"><h1>Sincronizza</h1></header>
+
+    <div class="card">
+      <div class="row-card">
+        <div class="tile"><span data-icon="folder"></span></div>
+        <div class="grow">
+          <strong id="folder-name">Cartella “Loop Player”</strong>
+          <span class="muted" id="sync-sub">Google Drive</span>
+        </div>
+        <span id="sync-badge" class="badge">Non collegata</span>
+      </div>
+      <hr>
+      <div class="grow">
+        <strong>Ultimo controllo</strong>
+        <span class="muted" id="last-sync">mai</span>
+      </div>
+      <button id="btn-sync" class="btn primary"><span data-icon="sync"></span>Sincronizza ora</button>
+      <p id="sync-error" class="error" hidden></p>
+    </div>
+
+    <h2 id="new-title" hidden>Nuovi brani trovati</h2>
+    <div id="sync-list" class="list"></div>
+
+    <div class="card inline">
+      <div class="grow">
+        <strong>Sincronizza all’apertura</strong>
+        <span class="muted">Scarica solo i brani nuovi</span>
+      </div>
+      <label class="switch"><input id="auto-sync" type="checkbox" aria-label="Sincronizza all’apertura"><span></span></label>
+    </div>
+
+    <div class="storage">
+      <div class="between"><strong>Spazio sul telefono</strong><span class="muted" id="storage-text">—</span></div>
+      <div class="bar"><div id="storage-bar"></div></div>
+    </div>
+
+    <button id="btn-import" class="btn ghost"><span data-icon="folder"></span>Aggiungi file dal telefono</button>
+    <input id="file-input" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac" multiple hidden>
+
+    <p class="note">Per aggiungere musica dal PC: copia i file nella cartella “Loop Player” su Google Drive. Alla prossima sincronizzazione compaiono qui e restano disponibili anche offline.</p>
+  </section>
+
+  <button id="mini" class="mini" hidden aria-label="Apri il player">
+    <div class="art" id="mini-art"></div>
+    <div class="grow left">
+      <strong id="mini-title">—</strong>
+      <span id="mini-mode" class="accent small">Loop</span>
+    </div>
+    <span id="mini-toggle" class="mini-toggle" role="button" aria-label="Play o pausa"></span>
+  </button>
+
+  <nav class="tabbar" aria-label="Navigazione">
+    <button class="tab active" data-go="library"><span data-icon="music"></span><span>Libreria</span></button>
+    <button class="tab" data-go="sync"><span data-icon="sync"></span><span>Sincronizza</span></button>
+  </nav>
+
+  <section id="player" class="player" aria-label="In riproduzione" aria-hidden="true">
+    <div class="player-top">
+      <button id="btn-close" class="icon-btn" aria-label="Chiudi"><span data-icon="down"></span></button>
+      <span class="eyebrow">IN RIPRODUZIONE</span>
+      <span class="icon-btn"></span>
+    </div>
+    <div class="cover" id="cover"></div>
+    <div class="meta">
+      <strong id="p-title">—</strong>
+      <span id="p-artist">—</span>
+    </div>
+    <div class="scrub">
+      <div class="range-wrap">
+        <div id="ab-zone" class="ab-zone" hidden></div>
+        <input id="seek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Posizione">
+      </div>
+      <div class="between small"><span id="t-cur">0:00</span><span id="t-rem">-0:00</span></div>
+    </div>
+    <div class="transport">
+      <button id="btn-prev" class="icon-btn lg" aria-label="Brano precedente"><span data-icon="prev"></span></button>
+      <button id="btn-play" class="play" aria-label="Play"></button>
+      <button id="btn-next" class="icon-btn lg" aria-label="Brano successivo"><span data-icon="next"></span></button>
+    </div>
+    <div class="loops">
+      <button id="btn-loop" class="loop-btn"><span data-icon="loop"></span><span id="loop-text">Loop brano</span><span id="loop-one" class="one">1</span></button>
+      <button id="btn-ab" class="ab-btn" aria-label="Loop di una sezione A–B">A–B</button>
+    </div>
+    <p id="ab-text" class="small muted center">Tocca A–B per fissare l’inizio della sezione</p>
+  </section>
+
+</main>
+<audio id="audio" preload="auto" playsinline></audio>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
