@@ -364,17 +364,30 @@ async function listRemote() {
   const q = `name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
   const fol = await (await gfetch('https://www.googleapis.com/drive/v3/files?fields=files(id,name)&q=' + encodeURIComponent(q))).json();
   if (!fol.files.length) throw new Error(`Cartella “${CFG.DRIVE_FOLDER_NAME}” non trovata su Google Drive`);
+  // Esplora tutte le cartelle con quel nome e le loro sottocartelle.
   const files = [];
-  let pageToken = '';
-  do {
-    const fq = `'${fol.files[0].id}' in parents and trashed=false`;
-    const u = 'https://www.googleapis.com/drive/v3/files?pageSize=1000&fields=nextPageToken,files(id,name,size,mimeType)&q=' +
-      encodeURIComponent(fq) + (pageToken ? '&pageToken=' + pageToken : '');
-    const page = await (await gfetch(u)).json();
-    files.push(...page.files);
-    pageToken = page.nextPageToken || '';
-  } while (pageToken);
-  return files.filter(f => (f.mimeType || '').startsWith('audio/') || /\.(mp3|m4a|aac|wav|flac)$/i.test(f.name));
+  const queue = fol.files.map(f => f.id);
+  const seen = new Set();
+  while (queue.length) {
+    const folderId = queue.shift();
+    if (seen.has(folderId)) continue;
+    seen.add(folderId);
+    let pageToken = '';
+    do {
+      const fq = `'${folderId}' in parents and trashed=false`;
+      const u = 'https://www.googleapis.com/drive/v3/files?pageSize=1000&fields=nextPageToken,files(id,name,size,mimeType)&q=' +
+        encodeURIComponent(fq) + (pageToken ? '&pageToken=' + pageToken : '');
+      const page = await (await gfetch(u)).json();
+      for (const f of page.files) {
+        if (f.mimeType === 'application/vnd.google-apps.folder') queue.push(f.id);
+        else files.push(f);
+      }
+      pageToken = page.nextPageToken || '';
+    } while (pageToken);
+  }
+  const audio = files.filter(f => (f.mimeType || '').startsWith('audio/') || /\.(mp3|m4a|aac|wav|flac|ogg|opus|aif|aiff|mp4)$/i.test(f.name));
+  drive.stats = { folders: fol.files.length, total: files.length, audio: audio.length, others: files.filter(f => !audio.includes(f)).slice(0, 3).map(f => f.name) };
+  return audio;
 }
 async function download(f, onProgress) {
   const r = await gfetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`);
@@ -403,6 +416,14 @@ async function syncNow() {
   try {
     await authorize();
     drive.remote = await listRemote();
+    const st = drive.stats;
+    $('#sync-sub').textContent = `Drive: ${st.audio} file audio su ${st.total} trovati`;
+    if (!st.audio) {
+      err.textContent = st.total
+        ? `Nella cartella ci sono file ma nessuno riconosciuto come audio (es. ${st.others.join(', ')}).`
+        : `La cartella “${CFG.DRIVE_FOLDER_NAME}” è vuota o i file non sono ancora stati caricati su Drive.`;
+      err.hidden = false;
+    }
     const have = new Set(state.tracks.map(t => t.driveId).filter(Boolean));
     const fresh = drive.remote.filter(f => !have.has(f.id));
     drive.progress = Object.fromEntries(fresh.map(f => [f.id, { pct: 0, st: 'In coda', file: f }]));
