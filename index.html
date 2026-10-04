@@ -2,38 +2,53 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0D0D11">
+<meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Loop">
+<meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="stylesheet" href="styles.css">
 <title>Loop Player</title>
 </head>
 <body>
-<main id="app">
+
+<div id="stage">
+  <div class="statusbar-scrim"></div>
+  <div id="navbar" class="navbar" aria-hidden="true"><span id="nav-title">Libreria</span></div>
+  <div id="ptr" class="ptr" aria-hidden="true"><span data-icon="spinner"></span></div>
 
   <section id="view-library" class="view active" aria-label="Libreria">
-    <header class="head">
+    <header class="large-title">
       <h1>Libreria</h1>
-      <button id="btn-edit" class="link">Modifica</button>
+      <button id="btn-edit" class="link tap">Modifica</button>
     </header>
-    <label class="search">
-      <span data-icon="search"></span>
-      <input id="search" type="search" placeholder="Cerca nei tuoi brani" aria-label="Cerca nei tuoi brani">
-    </label>
+    <div id="lib-tools">
+      <label class="search">
+        <span data-icon="search"></span>
+        <input id="search" type="search" placeholder="Cerca nei tuoi brani" aria-label="Cerca nei tuoi brani" autocomplete="off" enterkeyhint="search">
+      </label>
+      <div class="quick">
+        <button id="btn-playall" class="pill-btn tap"><span data-icon="playSm"></span>Riproduci</button>
+        <button id="btn-shuffleall" class="pill-btn tap"><span data-icon="shuffle"></span>Casuale</button>
+      </div>
+    </div>
     <div id="track-list" class="list"></div>
+    <p id="count" class="count"></p>
     <div id="empty" class="empty" hidden>
-      <p>Nessun brano nella libreria.</p>
-      <button class="btn primary" data-go="sync">Aggiungi brani</button>
+      <div class="empty-ico"><span data-icon="musicLg"></span></div>
+      <h2 class="empty-title">La tua libreria è vuota</h2>
+      <p>Aggiungi brani dal telefono o sincronizza la cartella “Loop Player” di Google Drive.</p>
+      <button class="btn primary tap" data-go="sync">Aggiungi brani</button>
     </div>
   </section>
 
   <section id="view-sync" class="view" aria-label="Sincronizza">
-    <header class="head"><h1>Sincronizza</h1></header>
+    <header class="large-title"><h1>Sincronizza</h1></header>
 
     <div class="card">
       <div class="row-card">
@@ -49,12 +64,12 @@
         <strong>Ultimo controllo</strong>
         <span class="muted" id="last-sync">mai</span>
       </div>
-      <button id="btn-sync" class="btn primary"><span data-icon="sync"></span>Sincronizza ora</button>
+      <button id="btn-sync" class="btn primary tap"><span class="sync-ico" data-icon="sync"></span><span id="sync-label">Sincronizza ora</span></button>
       <p id="sync-error" class="error" hidden></p>
     </div>
 
-    <h2 id="new-title" hidden>Nuovi brani trovati</h2>
-    <div id="sync-list" class="list"></div>
+    <h2 id="new-title" class="section" hidden>Nuovi brani trovati</h2>
+    <div id="sync-list" class="sync-list"></div>
 
     <div class="card inline">
       <div class="grow">
@@ -69,58 +84,82 @@
       <div class="bar"><div id="storage-bar"></div></div>
     </div>
 
-    <button id="btn-import" class="btn ghost"><span data-icon="folder"></span>Aggiungi file dal telefono</button>
+    <button id="btn-import" class="btn ghost tap"><span data-icon="folder"></span>Aggiungi file dal telefono</button>
     <input id="file-input" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac" multiple hidden>
 
-    <p class="note">Per aggiungere musica dal PC: copia i file nella cartella “Loop Player” su Google Drive. Alla prossima sincronizzazione compaiono qui e restano disponibili anche offline.</p>
+    <p class="note">Per aggiungere musica dal PC copia i file nella cartella “Loop Player” su Google Drive. Puoi anche trascinare verso il basso la Libreria per sincronizzare.</p>
   </section>
 
-  <button id="mini" class="mini" hidden aria-label="Apri il player">
-    <div class="art" id="mini-art"></div>
-    <div class="grow left">
-      <strong id="mini-title">—</strong>
-      <span id="mini-mode" class="accent small">Loop</span>
-    </div>
-    <span id="mini-toggle" class="mini-toggle" role="button" aria-label="Play o pausa"></span>
-  </button>
+  <div id="mini" class="mini" hidden>
+    <button id="mini-open" class="mini-open" aria-label="Apri il player">
+      <span id="mini-art" class="mini-art"></span>
+      <span class="mini-text"><strong id="mini-title">—</strong><span id="mini-artist">—</span></span>
+    </button>
+    <button id="mini-toggle" class="mini-btn play-btn" aria-label="Play">
+      <span class="ico i-play" data-icon="playMd"></span><span class="ico i-pause" data-icon="pauseMd"></span>
+    </button>
+    <button id="mini-next" class="mini-btn" aria-label="Brano successivo"><span data-icon="nextSm"></span></button>
+    <div class="mini-progress"><div id="mini-bar"></div></div>
+  </div>
 
   <nav class="tabbar" aria-label="Navigazione">
-    <button class="tab active" data-go="library"><span data-icon="music"></span><span>Libreria</span></button>
+    <button class="tab active" data-go="library" aria-current="page"><span data-icon="music"></span><span>Libreria</span></button>
     <button class="tab" data-go="sync"><span data-icon="sync"></span><span>Sincronizza</span></button>
   </nav>
+</div>
 
-  <section id="player" class="player" aria-label="In riproduzione" aria-hidden="true">
+<section id="player" class="player paused" aria-label="In riproduzione" aria-hidden="true">
+  <div class="player-bg" aria-hidden="true"></div>
+  <div class="player-inner">
+    <span class="grabber" aria-hidden="true"></span>
     <div class="player-top">
-      <button id="btn-close" class="icon-btn" aria-label="Chiudi"><span data-icon="down"></span></button>
+      <button id="btn-close" class="top-btn tap" aria-label="Chiudi il player"><span data-icon="down"></span></button>
       <span class="eyebrow">IN RIPRODUZIONE</span>
-      <span class="icon-btn"></span>
+      <button id="btn-timer" class="top-btn tap" aria-label="Timer di spegnimento"><span data-icon="moon"></span><span id="timer-left" class="timer-left"></span></button>
     </div>
-    <div class="cover" id="cover"></div>
+    <div id="cover-wrap" class="cover-wrap"><div id="cover" class="cover"></div></div>
     <div class="meta">
       <strong id="p-title">—</strong>
       <span id="p-artist">—</span>
     </div>
-    <div class="scrub">
-      <div class="range-wrap">
-        <div id="ab-zone" class="ab-zone" hidden></div>
-        <input id="seek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Posizione">
-      </div>
-      <div class="between small"><span id="t-cur">0:00</span><span id="t-rem">-0:00</span></div>
+    <div id="scrubber" class="scrubber" role="slider" tabindex="0" aria-label="Posizione nel brano" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+      <div class="track"><div id="ab-zone" class="ab-zone" hidden></div><div id="fill" class="fill"></div></div>
     </div>
+    <div class="times"><span id="t-cur">0:00</span><span id="t-rem">-0:00</span></div>
     <div class="transport">
-      <button id="btn-prev" class="icon-btn lg" aria-label="Brano precedente"><span data-icon="prev"></span></button>
-      <button id="btn-play" class="play" aria-label="Play"></button>
-      <button id="btn-next" class="icon-btn lg" aria-label="Brano successivo"><span data-icon="next"></span></button>
+      <button id="btn-prev" class="tbtn" aria-label="Brano precedente"><span data-icon="prev"></span></button>
+      <button id="btn-play" class="tbtn play-btn big" aria-label="Play">
+        <span class="ico i-play" data-icon="playLg"></span><span class="ico i-pause" data-icon="pauseLg"></span>
+      </button>
+      <button id="btn-next" class="tbtn" aria-label="Brano successivo"><span data-icon="next"></span></button>
     </div>
     <div class="loops">
-      <button id="btn-loop" class="loop-btn"><span data-icon="loop"></span><span id="loop-text">Loop brano</span><span id="loop-one" class="one">1</span></button>
-      <button id="btn-ab" class="ab-btn" aria-label="Loop di una sezione A–B">A–B</button>
+      <button id="btn-shuffle" class="chip sq" aria-label="Riproduzione casuale" aria-pressed="false"><span data-icon="shuffle"></span></button>
+      <button id="btn-loop" class="chip loop-btn"><span data-icon="loop"></span><span id="loop-text">Loop brano</span><span class="one" aria-hidden="true">1</span></button>
+      <button id="btn-ab" class="chip sq ab-btn" aria-label="Loop di una sezione A–B">A–B</button>
     </div>
-    <p id="ab-text" class="small muted center">Tocca A–B per fissare l’inizio della sezione</p>
-  </section>
+    <p id="ab-text" class="ab-text">Tocca A–B per fissare l’inizio della sezione</p>
+  </div>
+</section>
 
-</main>
+<div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
+<div id="action-sheet" class="action-sheet" role="dialog" aria-modal="true" aria-label="Timer di spegnimento" hidden>
+  <div class="as-group">
+    <div class="as-title">Interrompi la riproduzione tra</div>
+    <button data-sleep="15">15 minuti</button>
+    <button data-sleep="30">30 minuti</button>
+    <button data-sleep="45">45 minuti</button>
+    <button data-sleep="60">1 ora</button>
+    <button data-sleep="90">1 ora e mezza</button>
+    <button id="as-off" class="danger" data-sleep="0" hidden>Disattiva timer</button>
+  </div>
+  <button class="as-cancel" data-sleep="cancel">Annulla</button>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<label id="haptic" class="haptic" aria-hidden="true"><input type="checkbox" switch tabindex="-1"></label>
 <audio id="audio" preload="auto" playsinline></audio>
+
 <script src="config.js"></script>
 <script src="app.js"></script>
 </body>
