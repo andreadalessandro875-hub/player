@@ -40,6 +40,15 @@ const ICONS = {
   playMd: sw(28, '<path d="M7 4.5v15a1 1 0 001.5.86l12.4-7.5a1 1 0 000-1.72L8.5 3.64A1 1 0 007 4.5z"/>', 'fill="currentColor"'),
   pauseMd: sw(28, '<rect x="5.5" y="4" width="4.5" height="16" rx="1.2"/><rect x="14" y="4" width="4.5" height="16" rx="1.2"/>', 'fill="currentColor"'),
   playSm: sw(18, '<path d="M7 4.5v15a1 1 0 001.5.86l12.4-7.5a1 1 0 000-1.72L8.5 3.64A1 1 0 007 4.5z"/>', 'fill="currentColor"'),
+  list: sw(26, '<path d="M4 6h11M4 12h11M4 18h6"/><path d="M19 15V5l3 1.2"/><circle cx="17" cy="16" r="2.2"/>', STROKE + ' stroke-width="2"'),
+  listAdd: sw(22, '<path d="M4 6h12M4 12h8M4 18h8"/><path d="M18 14v8M14 18h8"/>', STROKE + ' stroke-width="2.2"'),
+  plus: sw(24, '<path d="M12 5v14M5 12h14"/>', STROKE + ' stroke-width="2.6"'),
+  back: sw(24, '<path d="M15 5l-7 7 7 7"/>', STROKE + ' stroke-width="2.6"'),
+  more: sw(26, '<circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/>', 'fill="currentColor"'),
+  chev: sw(18, '<path d="M9 5l7 7-7 7"/>', STROKE + ' stroke-width="2.6"'),
+  check: sw(18, '<path d="M5 12.5l4.5 4.5L19 7"/>', STROKE + ' stroke-width="3"'),
+  up: sw(20, '<path d="M6 15l6-6 6 6"/>', STROKE + ' stroke-width="2.6"'),
+  down: sw(20, '<path d="M6 9l6 6 6-6"/>', STROKE + ' stroke-width="2.6"'),
   spinner: '<svg width="28" height="28" viewBox="0 0 28 28">' +
     Array.from({ length: 8 }, (_, i) => `<rect x="12.75" y="2" width="2.5" height="7" rx="1.25" fill="currentColor" opacity="${((i + 1) / 8).toFixed(2)}" transform="rotate(${i * 45} 14 14)"/>`).join('') + '</svg>'
 };
@@ -285,13 +294,28 @@ const state = {
   ab: { a: null, b: null },
   query: '',
   editing: false,
-  sleepAt: 0
+  sleepAt: 0,
+  playlists: lsGet('playlists', []),
+  queue: { pl: lsGet('queuePl', null) },   // playlist da cui proviene la coda (null = libreria)
+  plView: null,
+  plEdit: false
 };
 const currentTrack = () => state.tracks.find(t => t.id === state.current);
 const sortTracks = () => state.tracks.sort((a, b) => a.title.localeCompare(b.title, 'it', { sensitivity: 'base' }));
 
+function sourceIds() {
+  const all = state.tracks.map(t => t.id), p = getPl(state.queue.pl);
+  if (p) { const ids = p.ids.filter(id => all.includes(id)); if (ids.length) return ids; }
+  state.queue.pl = null;
+  return all;
+}
+function renderSource() {
+  const p = getPl(state.queue.pl);
+  $('#player .eyebrow').textContent = p ? 'DA ' + p.name.toUpperCase() : 'IN RIPRODUZIONE';
+  lsSet('queuePl', p ? p.id : null);
+}
 function rebuildOrder(keepCurrent = true) {
-  const ids = state.tracks.map(t => t.id);
+  const ids = sourceIds();
   if (state.shuffle) {
     for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
     const k = ids.indexOf(state.current);
@@ -359,22 +383,26 @@ let activeView = $('#view-library');
 const ptr = $('#ptr');
 let ptrArmed = false, ptrBusy = false, touching = false, navTick = false;
 
+const VIEW_TITLES = { library: 'Libreria', playlists: 'Playlist', playlist: 'Playlist', sync: 'Sincronizza' };
 function go(name) {
   const next = $('#view-' + name);
   if (next === activeView) { next.scrollTo({ top: 0, behavior: 'smooth' }); return; }
   closeRow();
-  activeView.classList.remove('active', 'enter');
+  activeView.classList.remove('active', 'enter', 'enter-r');
   next.classList.add('active');
-  next.classList.remove('enter');
+  next.classList.remove('enter', 'enter-r');
   void next.offsetWidth;
-  next.classList.add('enter');
+  next.classList.add(name === 'playlist' ? 'enter-r' : 'enter');
   activeView = next;
+  const tab = name === 'playlist' ? 'playlists' : name;
   $$('.tab').forEach(t => {
-    const on = t.dataset.go === name;
+    const on = t.dataset.go === tab;
     t.classList.toggle('active', on);
     on ? t.setAttribute('aria-current', 'page') : t.removeAttribute('aria-current');
   });
-  $('#nav-title').textContent = name === 'sync' ? 'Sincronizza' : 'Libreria';
+  $('#nav-title').textContent = name === 'playlist' ? (getPl(state.plView)?.name || 'Playlist') : VIEW_TITLES[name];
+  if (name === 'playlist') next.scrollTop = 0;
+  if (name === 'playlists') renderPlaylists({ animate: true });
   updateNav();
   if (name === 'sync') renderSync();
 }
@@ -404,10 +432,125 @@ libView.addEventListener('touchend', () => {
   if (ptrArmed) { ptrArmed = false; pullSync(); }
 }, { passive: true });
 
-/* ================= Libreria ================= */
+/* ================= Elenchi di brani (libreria e playlist) ================= */
 const list = $('#track-list');
+const plList = $('#pl-list');
 let openRow = null, lastSwipe = 0;
+const DEL_W = 88;
 
+function rowHtml(t, i, o = {}) {
+  const id = esc(t.id), del = o.delLabel || 'Elimina';
+  return `
+    <div class="row-wrap${o.animate ? ' in' : ''}" data-id="${id}" style="--i:${Math.min(i, 14)}">
+      <button class="row-del" data-del="${id}" tabindex="-1" aria-hidden="true">${del}</button>
+      <button class="row-main" data-play="${id}">
+        ${artNode(t, 'art-sm')}
+        <span class="row-text"><span class="title">${esc(t.title)}</span><span class="sub">${esc(t.artist)}</span></span>
+        <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="dur">${t.duration ? fmt(t.duration) : ''}</span>
+      </button>
+      ${o.reorder ? `<span class="mv">
+        <button data-mv="up" data-id="${id}" aria-label="Sposta su"${i === 0 ? ' disabled' : ''}>${ICONS.up}</button>
+        <button data-mv="down" data-id="${id}" aria-label="Sposta giù"${i === o.count - 1 ? ' disabled' : ''}>${ICONS.down}</button>
+      </span>` : ''}
+      <button class="edit-del" data-del="${id}" aria-label="${del} ${esc(t.title)}"><span></span></button>
+    </div>`;
+}
+function markPlaying() {
+  $$('.row-main').forEach(el => {
+    const on = el.dataset.play === state.current;
+    el.classList.toggle('playing', on);
+    el.classList.toggle('paused', on && audio.paused);
+  });
+}
+function closeRow(row = openRow) {
+  if (!row) return;
+  const main = $('.row-main', row);
+  main.style.transform = '';
+  // Nasconde lo sfondo rosso solo a fine animazione di chiusura.
+  setTimeout(() => { if (row !== openRow && !main.classList.contains('dragging')) row.classList.remove('swiping'); }, 450);
+  if (row === openRow) openRow = null;
+}
+async function collapseRow(wrap) {
+  if (!wrap) return;
+  $('.row-main', wrap).style.transform = 'translate3d(-100%,0,0)';
+  wrap.style.height = wrap.offsetHeight + 'px';
+  void wrap.offsetHeight;
+  wrap.classList.add('removing');
+  wrap.style.height = '0px';
+  await wait(340);
+}
+
+// Gesti comuni: tocco, scorrimento a sinistra per eliminare, pressione lunga per il menu.
+function bindList(el, cfg) {
+  let swp = null, hold = 0;
+  const clearHold = () => { clearTimeout(hold); hold = 0; };
+  el.addEventListener('click', e => {
+    if (performance.now() - lastSwipe < 350) return;
+    const mv = e.target.closest('[data-mv]');
+    if (mv) { cfg.onMove(mv.dataset.id, mv.dataset.mv); return; }
+    const del = e.target.closest('[data-del]');
+    if (del) { cfg.onDelete(del.dataset.del); return; }
+    const row = e.target.closest('[data-play]');
+    if (!row) return;
+    if (openRow) { closeRow(); return; }
+    if (cfg.editing()) return;
+    haptic();
+    cfg.onPlay(row.dataset.play);
+  });
+  el.addEventListener('pointerdown', e => {
+    const wrap = e.target.closest('.row-wrap');
+    if (!wrap || cfg.editing() || e.target.closest('.row-del') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (openRow && openRow !== wrap) closeRow();
+    swp = { wrap, main: $('.row-main', wrap), x0: e.clientX, y0: e.clientY, base: wrap === openRow ? -DEL_W : 0, x: 0, on: false, id: e.pointerId };
+    clearHold();
+    if (cfg.onHold) {
+      hold = setTimeout(() => {
+        hold = 0;
+        if (!swp || swp.on) return;
+        swp = null;
+        lastSwipe = performance.now();
+        haptic(true);
+        cfg.onHold(wrap.dataset.id);
+      }, 520);
+    }
+  });
+  el.addEventListener('pointermove', e => {
+    if (!swp || e.pointerId !== swp.id) return;
+    const dx = e.clientX - swp.x0, dy = e.clientY - swp.y0;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) clearHold();
+    if (!swp.on) {
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+        swp.on = true;
+        swp.wrap.classList.add('swiping');
+        swp.main.classList.add('dragging');
+        try { swp.main.setPointerCapture(e.pointerId); } catch { /* già rilasciato */ }
+      } else if (Math.abs(dy) > 10) { swp = null; return; } else return;
+    }
+    let x = swp.base + dx;
+    if (x > 0) x *= 0.15;
+    swp.x = x;
+    swp.main.style.transform = `translate3d(${x}px,0,0)`;
+  });
+  const end = cancel => {
+    clearHold();
+    if (!swp) return;
+    const s = swp;
+    swp = null;
+    if (!s.on) return;
+    lastSwipe = performance.now();
+    s.main.classList.remove('dragging');
+    const w = s.wrap.offsetWidth;
+    if (!cancel && s.x < -w * 0.55) { haptic(true); cfg.onDelete(s.wrap.dataset.id); return; }
+    if (!cancel && s.x < -DEL_W / 2) { s.main.style.transform = `translate3d(${-DEL_W}px,0,0)`; openRow = s.wrap; haptic(); }
+    else closeRow(s.wrap);
+  };
+  el.addEventListener('pointerup', () => end(false));
+  el.addEventListener('pointercancel', () => end(true));
+}
+document.addEventListener('pointerdown', e => { if (openRow && !openRow.contains(e.target)) closeRow(); }, true);
+
+/* ---------- Libreria ---------- */
 function renderLibrary({ animate = false } = {}) {
   const q = state.query.trim().toLowerCase();
   const items = state.tracks.filter(t => !q || (t.title + ' ' + t.artist).toLowerCase().includes(q));
@@ -421,28 +564,11 @@ function renderLibrary({ animate = false } = {}) {
   openRow = null;
   list.innerHTML = q && !items.length
     ? `<p class="no-results">Nessun risultato per “${esc(state.query)}”</p>`
-    : items.map((t, i) => `
-      <div class="row-wrap${animate ? ' in' : ''}" data-id="${esc(t.id)}" style="--i:${Math.min(i, 14)}">
-        <button class="row-del" data-del="${esc(t.id)}" tabindex="-1" aria-hidden="true">Elimina</button>
-        <button class="row-main" data-play="${esc(t.id)}">
-          ${artNode(t, 'art-sm')}
-          <span class="row-text"><span class="title">${esc(t.title)}</span><span class="sub">${esc(t.artist)}</span></span>
-          <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <span class="dur">${t.duration ? fmt(t.duration) : ''}</span>
-        </button>
-        <button class="edit-del" data-del="${esc(t.id)}" aria-label="Elimina ${esc(t.title)}"><span></span></button>
-      </div>`).join('');
+    : items.map((t, i) => rowHtml(t, i, { animate })).join('');
   const total = state.tracks.reduce((s, t) => s + (t.duration || 0), 0);
   const n = state.tracks.length;
   $('#count').textContent = has ? `${n} ${n === 1 ? 'brano' : 'brani'} · ${Math.max(1, Math.round(total / 60))} min` : '';
   markPlaying();
-}
-function markPlaying() {
-  $$('.row-main', list).forEach(el => {
-    const on = el.dataset.play === state.current;
-    el.classList.toggle('playing', on);
-    el.classList.toggle('paused', on && audio.paused);
-  });
 }
 $('#search').addEventListener('input', e => { state.query = e.target.value; renderLibrary(); });
 $('#search').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
@@ -450,12 +576,14 @@ $('#btn-edit').addEventListener('click', () => { state.editing = !state.editing;
 $('#btn-playall').addEventListener('click', () => {
   if (!state.tracks.length) return;
   haptic();
+  state.queue.pl = null;
   setShuffle(false, true);
   load(state.order[0]);
 });
 $('#btn-shuffleall').addEventListener('click', () => {
   if (!state.tracks.length) return;
   haptic();
+  state.queue.pl = null;
   state.shuffle = true;
   lsSet('shuffle', true);
   rebuildOrder(false);
@@ -464,83 +592,36 @@ $('#btn-shuffleall').addEventListener('click', () => {
   toast('Riproduzione casuale');
 });
 
-list.addEventListener('click', e => {
-  if (performance.now() - lastSwipe < 350) return;
-  const del = e.target.closest('[data-del]');
-  if (del) { deleteTrack(del.dataset.del); return; }
-  const row = e.target.closest('[data-play]');
-  if (!row) return;
-  if (openRow) { closeRow(); return; }
-  if (state.editing) return;
-  haptic();
-  const id = row.dataset.play;
-  if (id === state.current) { if (audio.paused) audio.play(); openPlayer(); return; }
+// Avvia un brano scegliendo da dove proviene la coda (libreria o playlist).
+function playFrom(id, plId = null) {
+  state.queue.pl = plId;
+  state.current = id;
+  rebuildOrder(true);
   load(id);
-  if (state.shuffle) rebuildOrder();
-});
-
-// Scorrimento a sinistra per eliminare (come in Mail/Musica).
-let swp = null;
-const DEL_W = 88;
-function closeRow(row = openRow) {
-  if (!row) return;
-  const main = $('.row-main', row);
-  main.style.transform = '';
-  // Nasconde lo sfondo rosso solo a fine animazione di chiusura.
-  setTimeout(() => { if (row !== openRow && !main.classList.contains('dragging')) row.classList.remove('swiping'); }, 450);
-  if (row === openRow) openRow = null;
 }
-list.addEventListener('pointerdown', e => {
-  const wrap = e.target.closest('.row-wrap');
-  if (!wrap || state.editing || (e.pointerType === 'mouse' && e.button !== 0)) return;
-  if (openRow && openRow !== wrap) closeRow();
-  swp = { wrap, main: $('.row-main', wrap), x0: e.clientX, y0: e.clientY, base: wrap === openRow ? -DEL_W : 0, x: 0, on: false, id: e.pointerId };
-});
-list.addEventListener('pointermove', e => {
-  if (!swp || e.pointerId !== swp.id) return;
-  const dx = e.clientX - swp.x0, dy = e.clientY - swp.y0;
-  if (!swp.on) {
-    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.2) {
-      swp.on = true;
-      swp.wrap.classList.add('swiping');
-      swp.main.classList.add('dragging');
-      try { swp.main.setPointerCapture(e.pointerId); } catch { /* già rilasciato */ }
-    } else if (Math.abs(dy) > 10) { swp = null; return; } else return;
+bindList(list, {
+  editing: () => state.editing,
+  onPlay: id => {
+    if (id === state.current) { if (audio.paused) audio.play(); openPlayer(); return; }
+    playFrom(id, null);
+  },
+  onDelete: id => deleteTrack(id),
+  onHold: async id => {
+    const t = state.tracks.find(x => x.id === id);
+    if (!t) return;
+    const k = await actionSheet(t.title, [
+      { k: 'pl', label: 'Aggiungi a una playlist…' },
+      { k: 'del', label: 'Elimina dalla libreria', danger: true }
+    ]);
+    if (k === 'pl') addToPlaylistFlow(id);
+    else if (k === 'del') deleteTrack(id);
   }
-  let x = swp.base + dx;
-  if (x > 0) x *= 0.15;
-  swp.x = x;
-  swp.main.style.transform = `translate3d(${x}px,0,0)`;
 });
-function endSwipe(cancel) {
-  if (!swp) return;
-  const s = swp;
-  swp = null;
-  if (!s.on) return;
-  lastSwipe = performance.now();
-  s.main.classList.remove('dragging');
-  const w = s.wrap.offsetWidth;
-  if (!cancel && s.x < -w * 0.55) { haptic(true); deleteTrack(s.wrap.dataset.id); return; }
-  if (!cancel && s.x < -DEL_W / 2) { s.main.style.transform = `translate3d(${-DEL_W}px,0,0)`; openRow = s.wrap; haptic(); }
-  else closeRow(s.wrap);
-}
-list.addEventListener('pointerup', () => endSwipe(false));
-list.addEventListener('pointercancel', () => endSwipe(true));
-document.addEventListener('pointerdown', e => { if (openRow && !openRow.contains(e.target)) closeRow(); }, true);
 
 async function deleteTrack(id) {
   const t = state.tracks.find(x => x.id === id);
   if (!t) return;
-  const wrap = list.querySelector(`.row-wrap[data-id="${CSS.escape(id)}"]`);
-  if (wrap) {
-    const main = $('.row-main', wrap);
-    main.style.transform = 'translate3d(-100%,0,0)';
-    wrap.style.height = wrap.offsetHeight + 'px';
-    void wrap.offsetHeight;
-    wrap.classList.add('removing');
-    wrap.style.height = '0px';
-    await wait(340);
-  }
+  await collapseRow($(`#track-list .row-wrap[data-id="${CSS.escape(id)}"]`));
   if (id === state.current) {
     audio.pause();
     audio.removeAttribute('src');
@@ -553,9 +634,272 @@ async function deleteTrack(id) {
   await dbDelete(id);
   dropArt(id);
   state.tracks = state.tracks.filter(x => x.id !== id);
+  state.playlists.forEach(p => { p.ids = p.ids.filter(x => x !== id); });
+  savePlaylists();
   rebuildOrder();
   renderLibrary();
+  if (activeView.id === 'view-playlist') renderPlaylistDetail();
   toast('Brano eliminato');
+}
+
+/* ================= Playlist ================= */
+const savePlaylists = () => lsSet('playlists', state.playlists);
+const getPl = id => state.playlists.find(p => p.id === id);
+const plTracks = p => p.ids.map(id => state.tracks.find(t => t.id === id)).filter(Boolean);
+const plCount = n => `${n} ${n === 1 ? 'brano' : 'brani'}`;
+function plMeta(p) {
+  const ts = plTracks(p), min = Math.round(ts.reduce((s, t) => s + (t.duration || 0), 0) / 60);
+  return plCount(ts.length) + (ts.length ? ` · ${Math.max(1, min)} min` : '');
+}
+function plCover(p) {
+  const ts = plTracks(p);
+  if (!ts.length) return `<div class="pl-cover empty">${ICONS.list}</div>`;
+  if (ts.length < 4) return `<div class="pl-cover single">${artNode(ts[0], 'art-fill')}</div>`;
+  return `<div class="pl-cover">${ts.slice(0, 4).map(t => artNode(t, 'art-fill')).join('')}</div>`;
+}
+function pruneLists() {
+  const all = new Set(state.tracks.map(t => t.id));
+  state.playlists.forEach(p => { p.ids = p.ids.filter(id => all.has(id)); });
+  savePlaylists();
+}
+function renderPlaylists({ animate = false } = {}) {
+  const has = state.playlists.length > 0;
+  $('#pl-empty').hidden = has;
+  $('#pl-grid').innerHTML = !has ? '' :
+    `<button class="pl-row pl-new tap" id="row-newpl"><div class="pl-cover empty">${ICONS.plus}</div><span class="row-text"><span class="title" style="color:var(--accent)">Nuova playlist</span></span></button>` +
+    state.playlists.map((p, i) => `
+      <button class="pl-row${animate ? ' in' : ''}${state.queue.pl === p.id && state.current ? ' playing' : ''}" data-pl="${esc(p.id)}" style="--i:${Math.min(i, 14)}">
+        ${plCover(p)}
+        <span class="row-text"><span class="title">${esc(p.name)}</span><span class="sub">${plMeta(p)}</span></span>
+        <span class="pl-chev">${ICONS.chev}</span>
+      </button>`).join('');
+}
+function renderPlaylistDetail({ animate = false } = {}) {
+  const p = getPl(state.plView);
+  if (!p) { go('playlists'); return; }
+  const ts = plTracks(p), has = ts.length > 0;
+  if (!has) state.plEdit = false;
+  $('#pl-title').textContent = p.name;
+  $('#nav-title').textContent = p.name;
+  $('#pl-meta').textContent = plMeta(p);
+  $('#pl-tools').hidden = !has;
+  $('#btn-pl-edit').hidden = !has;
+  $('#btn-pl-edit').textContent = state.plEdit ? 'Fine' : 'Modifica';
+  plList.classList.toggle('editing', state.plEdit);
+  openRow = null;
+  plList.innerHTML = ts.map((t, i) => rowHtml(t, i, { animate, delLabel: 'Rimuovi', reorder: true, count: ts.length })).join('');
+  markPlaying();
+}
+function openPlaylist(id) {
+  state.plView = id;
+  state.plEdit = false;
+  renderPlaylistDetail({ animate: true });
+  go('playlist');
+}
+// Da chiamare dopo ogni modifica al contenuto di una playlist.
+function afterPlaylistChange(id) {
+  savePlaylists();
+  renderPlaylists();
+  if (state.plView === id && activeView.id === 'view-playlist') renderPlaylistDetail();
+  if (state.queue.pl === id) rebuildOrder();
+}
+
+function playPlaylist(id, shuffle) {
+  const p = getPl(id);
+  if (!p || !plTracks(p).length) { toast('La playlist è vuota'); return; }
+  state.queue.pl = id;
+  state.shuffle = shuffle;
+  lsSet('shuffle', shuffle);
+  rebuildOrder(false);
+  renderShuffle();
+  load(state.order[0]);
+  if (shuffle) toast('Riproduzione casuale');
+}
+async function createPlaylist(ids = []) {
+  const name = await promptName({ title: 'Nuova playlist', msg: 'Dai un nome alla playlist.', ok: 'Crea', value: '' });
+  if (name === null) return null;
+  const p = { id: crypto.randomUUID(), name: name || `Playlist ${state.playlists.length + 1}`, ids: [...ids], created: Date.now() };
+  state.playlists.push(p);
+  savePlaylists();
+  renderPlaylists();
+  return p;
+}
+async function newPlaylistFromView() {
+  const p = await createPlaylist();
+  if (!p) return;
+  openPlaylist(p.id);
+  if (state.tracks.length) setTimeout(() => openPicker(p.id), 350);
+}
+$('#btn-newpl').addEventListener('click', () => { haptic(); newPlaylistFromView(); });
+$('#btn-newpl2').addEventListener('click', () => { haptic(); newPlaylistFromView(); });
+$('#pl-grid').addEventListener('click', e => {
+  if (e.target.closest('#row-newpl')) { haptic(); newPlaylistFromView(); return; }
+  const row = e.target.closest('[data-pl]');
+  if (row) { haptic(); openPlaylist(row.dataset.pl); }
+});
+$('#btn-pl-edit').addEventListener('click', () => { state.plEdit = !state.plEdit; haptic(); renderPlaylistDetail(); });
+$('#btn-pl-play').addEventListener('click', () => { haptic(); playPlaylist(state.plView, false); });
+$('#btn-pl-shuffle').addEventListener('click', () => { haptic(); playPlaylist(state.plView, true); });
+$('#btn-pl-add').addEventListener('click', () => { haptic(); openPicker(state.plView); });
+$('#btn-pl-more').addEventListener('click', async () => {
+  const p = getPl(state.plView);
+  if (!p) return;
+  haptic();
+  const k = await actionSheet(p.name, [
+    { k: 'add', label: 'Aggiungi brani' },
+    { k: 'ren', label: 'Rinomina playlist' },
+    { k: 'del', label: 'Elimina playlist', danger: true }
+  ]);
+  if (k === 'add') openPicker(p.id);
+  else if (k === 'ren') {
+    const name = await promptName({ title: 'Rinomina playlist', msg: '', ok: 'Salva', value: p.name });
+    if (name) { p.name = name; savePlaylists(); renderPlaylistDetail(); renderPlaylists(); if (state.queue.pl === p.id) renderSource(); }
+  } else if (k === 'del') {
+    const c = await actionSheet(`Eliminare “${p.name}”? I brani restano nella libreria.`, [{ k: 'ok', label: 'Elimina playlist', danger: true }]);
+    if (c !== 'ok') return;
+    state.playlists = state.playlists.filter(x => x.id !== p.id);
+    savePlaylists();
+    if (state.queue.pl === p.id) { state.queue.pl = null; rebuildOrder(); renderSource(); }
+    go('playlists');
+    toast('Playlist eliminata');
+  }
+});
+bindList(plList, {
+  editing: () => state.plEdit,
+  onPlay: id => {
+    const p = getPl(state.plView);
+    if (!p) return;
+    if (id === state.current && state.queue.pl === p.id) { if (audio.paused) audio.play(); openPlayer(); return; }
+    playFrom(id, p.id);
+  },
+  onDelete: async id => {
+    const p = getPl(state.plView);
+    if (!p) return;
+    await collapseRow($(`#pl-list .row-wrap[data-id="${CSS.escape(id)}"]`));
+    p.ids = p.ids.filter(x => x !== id);
+    afterPlaylistChange(p.id);
+    toast('Rimosso dalla playlist');
+  },
+  onMove: (id, dir) => {
+    const p = getPl(state.plView);
+    if (!p) return;
+    const i = p.ids.indexOf(id), j = dir === 'up' ? i - 1 : i + 1;
+    if (i < 0 || j < 0 || j >= p.ids.length) return;
+    [p.ids[i], p.ids[j]] = [p.ids[j], p.ids[i]];
+    haptic();
+    afterPlaylistChange(p.id);
+  },
+  onHold: async id => {
+    const p = getPl(state.plView), t = state.tracks.find(x => x.id === id);
+    if (!p || !t) return;
+    const k = await actionSheet(t.title, [{ k: 'rm', label: 'Rimuovi dalla playlist', danger: true }]);
+    if (k === 'rm') {
+      await collapseRow($(`#pl-list .row-wrap[data-id="${CSS.escape(id)}"]`));
+      p.ids = p.ids.filter(x => x !== id);
+      afterPlaylistChange(p.id);
+    }
+  }
+});
+
+// Aggiunge (o toglie) un brano da una playlist: dal player o con pressione lunga in libreria.
+async function addToPlaylistFlow(trackId) {
+  if (!trackId) return;
+  const k = await actionSheet('Aggiungi a una playlist', [
+    { k: '__new', label: 'Nuova playlist…' },
+    ...state.playlists.map(p => ({ k: p.id, label: p.name, check: p.ids.includes(trackId) }))
+  ]);
+  if (!k) return;
+  if (k === '__new') {
+    const p = await createPlaylist([trackId]);
+    if (p) toast(`Aggiunto a “${p.name}”`);
+    return;
+  }
+  const p = getPl(k);
+  if (!p) return;
+  if (p.ids.includes(trackId)) { p.ids = p.ids.filter(x => x !== trackId); toast(`Rimosso da “${p.name}”`); }
+  else { p.ids.push(trackId); toast(`Aggiunto a “${p.name}”`); }
+  afterPlaylistChange(p.id);
+}
+$('#btn-addpl').addEventListener('click', () => { haptic(); addToPlaylistFlow(state.current); });
+
+/* ---------- Selettore dei brani da aggiungere ---------- */
+const picker = $('#picker');
+let pk = null;
+function openPicker(plId) {
+  const p = getPl(plId);
+  if (!p) return;
+  if (!state.tracks.length) { toast('Aggiungi prima dei brani alla libreria'); return; }
+  pk = { id: plId, sel: new Set(p.ids) };
+  $('#pk-title').textContent = p.name;
+  $('#pk-list').innerHTML = state.tracks.map(t => `
+    <button class="pick-row${pk.sel.has(t.id) ? ' sel' : ''}" data-id="${esc(t.id)}" role="checkbox" aria-checked="${pk.sel.has(t.id)}">
+      ${artNode(t, 'art-sm')}
+      <span class="row-text"><span class="title">${esc(t.title)}</span><span class="sub">${esc(t.artist)}</span></span>
+      <span class="check">${ICONS.check}</span>
+    </button>`).join('');
+  $('#pk-list').scrollTop = 0;
+  picker.setAttribute('aria-hidden', 'false');
+  void picker.offsetWidth;
+  picker.classList.add('show');
+}
+function closePicker() {
+  if (!pk) return;
+  pk = null;
+  picker.classList.remove('show');
+  picker.setAttribute('aria-hidden', 'true');
+}
+$('#pk-list').addEventListener('click', e => {
+  const r = e.target.closest('.pick-row');
+  if (!r || !pk) return;
+  const id = r.dataset.id, on = !pk.sel.has(id);
+  on ? pk.sel.add(id) : pk.sel.delete(id);
+  r.classList.toggle('sel', on);
+  r.setAttribute('aria-checked', String(on));
+  haptic();
+});
+$('#pk-cancel').addEventListener('click', closePicker);
+$('#pk-done').addEventListener('click', () => {
+  if (!pk) return;
+  const p = getPl(pk.id);
+  if (p) {
+    const kept = p.ids.filter(id => pk.sel.has(id));
+    const added = state.tracks.map(t => t.id).filter(id => pk.sel.has(id) && !p.ids.includes(id));
+    const removed = p.ids.length - kept.length;
+    p.ids = [...kept, ...added];
+    afterPlaylistChange(p.id);
+    haptic();
+    if (added.length) toast(`${added.length} ${added.length === 1 ? 'brano aggiunto' : 'brani aggiunti'}`);
+    else if (removed) toast(`${removed} ${removed === 1 ? 'brano rimosso' : 'brani rimossi'}`);
+  }
+  closePicker();
+});
+
+/* ---------- Dialogo con campo di testo (stile iOS) ---------- */
+const dlg = $('#dlg');
+function promptName({ title, msg, ok, value }) {
+  return new Promise(res => {
+    const form = $('#dlg-form'), inp = $('#dlg-input');
+    $('#dlg-title').textContent = title;
+    $('#dlg-msg').textContent = msg || '';
+    $('#dlg-ok').textContent = ok;
+    inp.value = value || '';
+    dlg.hidden = false;
+    void dlg.offsetWidth;
+    dlg.classList.add('show');
+    setTimeout(() => { inp.focus(); inp.select(); }, 140);
+    const finish = v => {
+      dlg.classList.remove('show');
+      setTimeout(() => { dlg.hidden = true; }, 300);
+      inp.blur();
+      form.onsubmit = null;
+      dlg.onclick = null;
+      $('#dlg-cancel').onclick = null;
+      res(v);
+    };
+    form.onsubmit = e => { e.preventDefault(); finish(inp.value.trim()); };
+    $('#dlg-cancel').onclick = () => finish(null);
+    dlg.onclick = e => { if (e.target === dlg) finish(null); };
+  });
 }
 
 /* ================= Player ================= */
@@ -572,6 +916,7 @@ async function load(id, { autoplay = true, at = 0, dir = 0 } = {}) {
   if (objUrl) URL.revokeObjectURL(objUrl);
   objUrl = URL.createObjectURL(blob);
   state.current = id;
+  renderSource();
   state.ab = { a: null, b: null };
   audio.src = objUrl;
   audio.loop = state.mode === 'one';
@@ -868,36 +1213,54 @@ function renderSleep() {
   b.classList.toggle('on', on);
   $('#timer-left').textContent = on ? left + '′' : '';
   b.setAttribute('aria-label', on ? `Timer attivo, ${left} minuti rimanenti` : 'Timer di spegnimento');
-  $('#as-off').hidden = !on;
   clearInterval(sleepIv);
   if (on) sleepIv = setInterval(renderSleep, 15000);
 }
+/* --- Menu a comparsa dal basso (action sheet) --- */
 const sheetEl = $('#action-sheet'), backdrop = $('#sheet-backdrop');
-function openSheet() {
-  backdrop.hidden = false;
-  sheetEl.hidden = false;
-  void sheetEl.offsetWidth;
-  backdrop.classList.add('show');
-  sheetEl.classList.add('show');
-  setTimeout(() => $('button', sheetEl).focus({ preventScroll: true }), 200);
+let sheetDone = null;
+function actionSheet(title, items) {
+  return new Promise(res => {
+    if (sheetDone) sheetDone(null);
+    $('#as-title').textContent = title || '';
+    $('#as-title').hidden = !title;
+    $('#as-items').innerHTML = items.map(it =>
+      `<button data-k="${esc(it.k)}"${it.danger ? ' class="danger"' : ''}><span>${esc(it.label)}</span>${it.check ? `<span class="ck">${ICONS.check}</span>` : ''}</button>`).join('');
+    backdrop.hidden = false;
+    sheetEl.hidden = false;
+    void sheetEl.offsetWidth;
+    backdrop.classList.add('show');
+    sheetEl.classList.add('show');
+    sheetDone = k => {
+      sheetDone = null;
+      backdrop.classList.remove('show');
+      sheetEl.classList.remove('show');
+      setTimeout(() => { if (!sheetDone) { backdrop.hidden = true; sheetEl.hidden = true; } }, 420);
+      res(k);
+    };
+  });
 }
-function closeSheet() {
-  backdrop.classList.remove('show');
-  sheetEl.classList.remove('show');
-  setTimeout(() => { backdrop.hidden = true; sheetEl.hidden = true; $('#btn-timer').focus({ preventScroll: true }); }, 400);
-}
-$('#btn-timer').addEventListener('click', () => { haptic(); openSheet(); });
-backdrop.addEventListener('click', closeSheet);
-sheetEl.addEventListener('click', e => {
-  const b = e.target.closest('[data-sleep]');
-  if (!b) return;
+backdrop.addEventListener('click', () => sheetDone && sheetDone(null));
+$('#as-cancel').addEventListener('click', () => sheetDone && sheetDone(null));
+$('#as-items').addEventListener('click', e => {
+  const b = e.target.closest('[data-k]');
+  if (!b || !sheetDone) return;
   haptic();
-  if (b.dataset.sleep !== 'cancel') setSleep(+b.dataset.sleep);
-  closeSheet();
+  sheetDone(b.dataset.k);
+});
+$('#btn-timer').addEventListener('click', async () => {
+  haptic();
+  const items = [15, 30, 45, 60, 90].map(m => ({ k: String(m), label: m === 60 ? '1 ora' : m === 90 ? '1 ora e mezza' : m + ' minuti' }));
+  if (state.sleepAt) items.push({ k: '0', label: 'Disattiva timer', danger: true });
+  const k = await actionSheet('Interrompi la riproduzione tra', items);
+  if (k !== null) setSleep(+k);
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  if (!sheetEl.hidden) closeSheet(); else if (sheetOpen) closePlayer();
+  if (!dlg.hidden) $('#dlg-cancel').click();
+  else if (sheetDone) sheetDone(null);
+  else if (pk) closePicker();
+  else if (sheetOpen) closePlayer();
 });
 
 /* --- Mini player --- */
@@ -1168,8 +1531,11 @@ async function renderStorage() {
   initMediaSession();
   try { state.tracks = await dbAll(); } catch { toast('Archivio del telefono non disponibile'); }
   sortTracks();
+  pruneLists();
   rebuildOrder();
   renderLibrary({ animate: true });
+  renderPlaylists();
+  renderSource();
   renderLoop();
   renderShuffle();
   renderSleep();

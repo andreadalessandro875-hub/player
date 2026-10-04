@@ -47,6 +47,38 @@
     </div>
   </section>
 
+  <section id="view-playlists" class="view" aria-label="Playlist">
+    <header class="large-title">
+      <h1>Playlist</h1>
+      <button id="btn-newpl" class="icon-link tap" aria-label="Nuova playlist"><span data-icon="plus"></span></button>
+    </header>
+    <div id="pl-grid" class="list"></div>
+    <div id="pl-empty" class="empty" hidden>
+      <div class="empty-ico"><span data-icon="list"></span></div>
+      <h2 class="empty-title">Nessuna playlist</h2>
+      <p>Crea una playlist per raggruppare i brani da ascoltare insieme, anche in loop.</p>
+      <button id="btn-newpl2" class="btn primary tap">Crea playlist</button>
+    </div>
+  </section>
+
+  <section id="view-playlist" class="view" aria-label="Dettaglio playlist">
+    <div class="subbar">
+      <button class="back tap" data-go="playlists"><span data-icon="back"></span>Playlist</button>
+      <div class="subbar-right">
+        <button id="btn-pl-edit" class="link tap">Modifica</button>
+        <button id="btn-pl-more" class="icon-link tap" aria-label="Altre azioni"><span data-icon="more"></span></button>
+      </div>
+    </div>
+    <header class="large-title"><h1 id="pl-title">Playlist</h1></header>
+    <p id="pl-meta" class="pl-meta"></p>
+    <div id="pl-tools" class="quick">
+      <button id="btn-pl-play" class="pill-btn tap"><span data-icon="playSm"></span>Riproduci</button>
+      <button id="btn-pl-shuffle" class="pill-btn tap"><span data-icon="shuffle"></span>Casuale</button>
+    </div>
+    <button id="btn-pl-add" class="add-row tap"><span data-icon="plus"></span>Aggiungi brani</button>
+    <div id="pl-list" class="list reorder"></div>
+  </section>
+
   <section id="view-sync" class="view" aria-label="Sincronizza">
     <header class="large-title"><h1>Sincronizza</h1></header>
 
@@ -104,6 +136,7 @@
 
   <nav class="tabbar" aria-label="Navigazione">
     <button class="tab active" data-go="library" aria-current="page"><span data-icon="music"></span><span>Libreria</span></button>
+    <button class="tab" data-go="playlists"><span data-icon="list"></span><span>Playlist</span></button>
     <button class="tab" data-go="sync"><span data-icon="sync"></span><span>Sincronizza</span></button>
   </nav>
 </div>
@@ -115,7 +148,10 @@
     <div class="player-top">
       <button id="btn-close" class="top-btn tap" aria-label="Chiudi il player"><span data-icon="down"></span></button>
       <span class="eyebrow">IN RIPRODUZIONE</span>
-      <button id="btn-timer" class="top-btn tap" aria-label="Timer di spegnimento"><span data-icon="moon"></span><span id="timer-left" class="timer-left"></span></button>
+      <div class="top-right">
+        <button id="btn-addpl" class="top-btn tap" aria-label="Aggiungi a una playlist"><span data-icon="listAdd"></span></button>
+        <button id="btn-timer" class="top-btn tap" aria-label="Timer di spegnimento"><span data-icon="moon"></span><span id="timer-left" class="timer-left"></span></button>
+      </div>
     </div>
     <div id="cover-wrap" class="cover-wrap"><div id="cover" class="cover"></div></div>
     <div class="meta">
@@ -143,17 +179,27 @@
 </section>
 
 <div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
-<div id="action-sheet" class="action-sheet" role="dialog" aria-modal="true" aria-label="Timer di spegnimento" hidden>
-  <div class="as-group">
-    <div class="as-title">Interrompi la riproduzione tra</div>
-    <button data-sleep="15">15 minuti</button>
-    <button data-sleep="30">30 minuti</button>
-    <button data-sleep="45">45 minuti</button>
-    <button data-sleep="60">1 ora</button>
-    <button data-sleep="90">1 ora e mezza</button>
-    <button id="as-off" class="danger" data-sleep="0" hidden>Disattiva timer</button>
+<div id="action-sheet" class="action-sheet" role="dialog" aria-modal="true" aria-labelledby="as-title" hidden>
+  <div class="as-group"><div id="as-title" class="as-title"></div><div id="as-items"></div></div>
+  <button id="as-cancel" class="as-cancel">Annulla</button>
+</div>
+
+<div id="picker" class="picker" role="dialog" aria-modal="true" aria-labelledby="pk-title" aria-hidden="true">
+  <div class="picker-head">
+    <button id="pk-cancel" class="link tap">Annulla</button>
+    <strong id="pk-title">Aggiungi brani</strong>
+    <button id="pk-done" class="link tap bold">Fine</button>
   </div>
-  <button class="as-cancel" data-sleep="cancel">Annulla</button>
+  <div id="pk-list" class="picker-list"></div>
+</div>
+
+<div id="dlg" class="dlg" hidden>
+  <form id="dlg-form" class="dlg-card" role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+    <h3 id="dlg-title"></h3>
+    <p id="dlg-msg"></p>
+    <input id="dlg-input" maxlength="40" autocomplete="off" enterkeyhint="done" aria-label="Nome della playlist">
+    <div class="dlg-btns"><button type="button" id="dlg-cancel">Annulla</button><button type="submit" id="dlg-ok">Crea</button></div>
+  </form>
 </div>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>

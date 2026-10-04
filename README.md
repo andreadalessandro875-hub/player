@@ -5,6 +5,9 @@ Web app (PWA) per ascoltare i tuoi brani in loop, anche a schermo spento. HTML/J
 ## Funzioni
 - Libreria locale (IndexedDB) con ricerca; scorri a sinistra su un brano per eliminarlo (o usa *Modifica*)
 - Titolo, artista e copertina letti dai tag dei file (MP3 ID3, M4A); sfondo del player col colore della copertina
+- Playlist: crea, rinomina, elimina; aggiungi brani con il selettore, riordina e rimuovi da *Modifica*;
+  il player riproduce (e fa il loop) solo i brani della playlist da cui hai avviato
+- Aggiungi un brano a una playlist dal player (icona lista +) o con pressione lunga su una riga della libreria
 - Player a scheda in stile iOS: trascinalo in giù per chiuderlo, scorri la copertina per cambiare brano
 - Loop brano singolo / tutti / spento, riproduzione casuale, loop di una sezione A–B
 - Timer di spegnimento (15 min – 1 ora e mezza)
