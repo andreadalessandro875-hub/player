@@ -351,7 +351,12 @@ async function authorize() {
 }
 async function gfetch(url, opts = {}) {
   const r = await fetch(url, { ...opts, headers: { Authorization: 'Bearer ' + drive.token } });
-  if (!r.ok) throw new Error('Google Drive ha risposto ' + r.status);
+  if (!r.ok) {
+    let why = '';
+    try { const j = await r.json(); why = j.error.errors?.[0]?.reason || j.error.status || j.error.message || ''; } catch { /* corpo non leggibile */ }
+    if (r.status === 403) drive.token = null;   // forza un nuovo consenso al prossimo tentativo
+    throw new Error('Google Drive ha risposto ' + r.status + (why ? ' (' + why + ')' : ''));
+  }
   return r;
 }
 async function listRemote() {
