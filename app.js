@@ -322,6 +322,7 @@ function rebuildOrder(keepCurrent = true) {
     if (keepCurrent && k > 0) { ids.splice(k, 1); ids.unshift(state.current); }
   }
   state.order = ids;
+  if (state.current) prefetchNext();
 }
 function parseName(filename) {
   const base = filename.replace(/\.[^.]+$/, '').replace(/_/g, ' ').trim();
@@ -908,28 +909,54 @@ const coverWrap = $('#cover-wrap');
 const els = { fill: $('#fill'), miniBar: $('#mini-bar'), cur: $('#t-cur'), rem: $('#t-rem'), scrub: $('#scrubber'), track: $('#scrubber .track') };
 let objUrl = null, lastSec = -1, raf = 0, lastSave = 0;
 
-async function load(id, { autoplay = true, at = 0, dir = 0 } = {}) {
-  const t = state.tracks.find(x => x.id === id);
-  if (!t) return;
-  const blob = await dbBlob(id);
-  if (!blob) { toast('File del brano non trovato'); return; }
-  if (objUrl) URL.revokeObjectURL(objUrl);
-  objUrl = URL.createObjectURL(blob);
-  state.current = id;
-  renderSource();
+// Il brano successivo viene preparato in anticipo: così, quando finisce il corrente (anche a schermo
+// spento), si può cambiare sorgente e riprodurre subito, senza attese asincrone che iOS può sospendere.
+let pre = null, preTok = 0;
+const dropPre = () => { if (pre) URL.revokeObjectURL(pre.url); pre = null; };
+async function prefetchNext() {
+  const ord = state.order, cur = state.current, tok = ++preTok;
+  if (!cur || ord.length < 2) { dropPre(); return; }
+  let n = ord.indexOf(cur) + 1;
+  if (n >= ord.length) n = 0;
+  const id = ord[n];
+  if (pre && pre.id === id) return;
+  dropPre();
+  let blob = null;
+  try { blob = await dbBlob(id); } catch { /* archivio non disponibile */ }
+  if (!blob || tok !== preTok) return;
+  pre = { id, url: URL.createObjectURL(blob) };
+}
+function startTrack(t, url, { autoplay = true, at = 0, dir = 0 } = {}) {
+  if (objUrl && objUrl !== url) URL.revokeObjectURL(objUrl);
+  objUrl = url;
+  state.current = t.id;
   state.ab = { a: null, b: null };
-  audio.src = objUrl;
+  audio.src = url;
   audio.loop = state.mode === 'one';
+  if (autoplay) audio.play().catch(() => { /* serve un tocco dell'utente */ });
   if (at > 0) audio.addEventListener('loadedmetadata', () => { audio.currentTime = Math.min(at, audio.duration - 1 || 0); paintProgress(); }, { once: true });
   lastSec = -1;
+  renderSource();
   applyTrackUI(t, dir);
   renderAB();
   markPlaying();
   showMini(true);
   updateMediaMeta(t);
-  lsSet('last', { id, t: at });
-  if (autoplay) { try { await audio.play(); } catch { /* serve un tocco */ } }
+  lsSet('last', { id: t.id, t: at });
   paintProgress();
+  prefetchNext();
+}
+async function load(id, opts = {}) {
+  const t = state.tracks.find(x => x.id === id);
+  if (!t) return;
+  let url;
+  if (pre && pre.id === id) { url = pre.url; pre = null; }   // già pronto: parte in modo sincrono
+  else {
+    const blob = await dbBlob(id);
+    if (!blob) { toast('File del brano non trovato'); return; }
+    url = URL.createObjectURL(blob);
+  }
+  startTrack(t, url, opts);
 }
 function applyTrackUI(t, dir = 0) {
   $('#p-title').textContent = t.title;
