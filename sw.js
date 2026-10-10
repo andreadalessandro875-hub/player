@@ -1,5 +1,8 @@
-// Service worker: l'app funziona offline. Cambia VERSION a ogni aggiornamento per forzare il refresh.
-const VERSION = 'v10';
+// Service worker: l'app funziona anche offline.
+// Strategia "prima la rete": quando c'è connessione si caricano sempre i file aggiornati, tutti della stessa
+// versione (evita di mescolare un index.html vecchio con un app.js nuovo). La cache serve solo offline.
+// A ogni rilascio cambia VERSION qui e il parametro ?v= in index.html.
+const VERSION = 'v11';
 const CACHE = 'loop-player-' + VERSION;
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'config.js', 'manifest.webmanifest',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
@@ -16,18 +19,24 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Stale-while-revalidate solo per le risorse della stessa origine.
+const withTimeout = (p, ms) => new Promise((res, rej) => {
+  const t = setTimeout(() => rej(new Error('timeout')), ms);
+  p.then(r => { clearTimeout(t); res(r); }, err => { clearTimeout(t); rej(err); });
+});
+
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
-  e.respondWith(
-    caches.open(CACHE).then(async cache => {
-      const cached = await cache.match(req, { ignoreSearch: true });
-      const net = fetch(req).then(res => {
-        if (res.ok) cache.put(req, res.clone());
-        return res;
-      }).catch(() => cached);
-      return cached || net;
-    })
-  );
+  e.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    try {
+      const res = await withTimeout(fetch(req), 5000);
+      if (res.ok) cache.put(req, res.clone());
+      return res;
+    } catch {
+      const hit = await cache.match(req, { ignoreSearch: true }) ||
+        (req.mode === 'navigate' ? await cache.match('index.html') : undefined);
+      return hit || Response.error();
+    }
+  })());
 });

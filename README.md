@@ -28,7 +28,7 @@ Apri http://localhost:8080. L'importazione manuale funziona subito.
 Carica la cartella `loop-player` su GitHub Pages, Netlify o Cloudflare Pages. Poi su iPhone:
 Safari → apri l'indirizzo → Condividi → **Aggiungi a Home**. Apri l'app dall'icona sulla Home.
 
-Per aggiornare l'app: ripubblica i file e cambia `VERSION` in `sw.js`.
+Per aggiornare l'app: cambia `VERSION` in `sw.js` e il parametro `?v=` dei file in `index.html` (stesso numero), poi ripubblica.
 
 ## Sincronizzazione con Google Drive
 1. Vai su https://console.cloud.google.com e crea un progetto.

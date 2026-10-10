@@ -56,6 +56,8 @@ const paintIcons = (r = document) => $$('[data-icon]', r).forEach(el => { el.inn
 
 // Attiva gli stati :active su iOS.
 document.addEventListener('touchstart', () => {}, { passive: true });
+// Evita lo zoom accidentale con due dita, che su iPhone sposta tutta l'interfaccia.
+document.addEventListener('gesturestart', e => e.preventDefault());
 
 /* ================= Haptic e toast ================= */
 // Su iOS 18+ il tocco di un interruttore nativo produce una vibrazione leggera.
@@ -129,8 +131,8 @@ async function tintFromBlob(blob) {
 }
 function applyTint(t) {
   const { h, s } = t.tint || { h: hashHue(t.id), s: 60 };
-  player.style.setProperty('--tint1', `hsl(${h} ${clamp(s, 25, 70)}% 36%)`);
-  player.style.setProperty('--tint2', `hsl(${(h + 24) % 360} ${clamp(s, 20, 60)}% 17%)`);
+  player.style.setProperty('--tint1', `hsl(${h} ${clamp(s, 25, 70)}% 30%)`);
+  player.style.setProperty('--tint2', `hsl(${(h + 24) % 360} ${clamp(s, 20, 60)}% 11%)`);
 }
 const artData = new Map();
 const blobToDataURL = b => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.onerror = () => r(null); fr.readAsDataURL(b); });
@@ -1569,14 +1571,10 @@ async function renderStorage() {
   renderPlayState();
   const last = lsGet('last', null);
   if (last && state.tracks.some(t => t.id === last.id)) await load(last.id, { autoplay: false, at: last.t || 0 });
+  requestAnimationFrame(() => root.classList.remove('booting'));
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
-    let hadController = !!navigator.serviceWorker.controller;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (hadController) toast('Nuova versione pronta: riapri l’app');
-      hadController = true;
-    });
   }
   setTimeout(migrateTags, 1200);
   if (lsGet('autoSync', false) && CFG.GOOGLE_CLIENT_ID && tokenValid()) {
