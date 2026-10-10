@@ -12,8 +12,24 @@
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
-<script>document.documentElement.classList.add('booting');setTimeout(function(){document.documentElement.classList.remove('booting')},2500);</script>
-<link rel="stylesheet" href="styles.css?v=11">
+<script>
+// iOS, app aperta dalla Home: a volte Safari calcola l'altezza della pagina più corta della zona
+// sotto la Dynamic Island e lascia una striscia vuota in basso. Qui si misura l'altezza reale.
+(function () {
+  var d = document.documentElement;
+  function fit() {
+    var h = window.innerHeight;
+    var portrait = window.matchMedia('(orientation: portrait)').matches;
+    if (navigator.standalone && portrait && screen.height > h) h = screen.height;
+    d.style.setProperty('--app-h', h + 'px');
+  }
+  fit();
+  addEventListener('resize', fit);
+  addEventListener('orientationchange', function () { setTimeout(fit, 300); });
+  addEventListener('pageshow', fit);
+})();
+document.documentElement.classList.add('booting');setTimeout(function(){document.documentElement.classList.remove('booting')},2500);</script>
+<link rel="stylesheet" href="styles.css?v=12">
 <title>Loop Player</title>
 </head>
 <body>
@@ -207,7 +223,7 @@
 <label id="haptic" class="haptic" aria-hidden="true"><input type="checkbox" switch tabindex="-1"></label>
 <audio id="audio" preload="auto" playsinline></audio>
 
-<script src="config.js?v=11"></script>
-<script src="app.js?v=11"></script>
+<script src="config.js?v=12"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

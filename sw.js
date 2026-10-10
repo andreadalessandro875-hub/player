@@ -2,7 +2,7 @@
 // Strategia "prima la rete": quando c'è connessione si caricano sempre i file aggiornati, tutti della stessa
 // versione (evita di mescolare un index.html vecchio con un app.js nuovo). La cache serve solo offline.
 // A ogni rilascio cambia VERSION qui e il parametro ?v= in index.html.
-const VERSION = 'v11';
+const VERSION = 'v12';
 const CACHE = 'loop-player-' + VERSION;
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'config.js', 'manifest.webmanifest',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];

@@ -18,7 +18,7 @@ html{background:var(--bg);height:100%}
 html,body{margin:0;background:var(--bg);color:var(--text);
   font-family:-apple-system,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased;
   -webkit-text-size-adjust:100%;overscroll-behavior:none;touch-action:manipulation}
-body{position:fixed;inset:0;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body{position:fixed;top:0;left:0;right:0;height:var(--app-h,100%);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input{-webkit-user-select:text;user-select:text}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:inherit;touch-action:manipulation}
 svg,img{display:block;flex:none}
@@ -36,7 +36,7 @@ hr{border:0;height:.5px;background:var(--line);margin:0;width:100%}
 .tap:active{transform:scale(.96);opacity:.8;transition-duration:.08s}
 
 /* ---------- Stage (schermata sotto al player) ---------- */
-#stage{position:fixed;inset:0;background:var(--bg);overflow:hidden;transform-origin:50% 0;
+#stage{position:fixed;top:0;left:0;right:0;height:var(--app-h,100%);background:var(--bg);overflow:hidden;transform-origin:50% 0;
   transform:translate3d(0,calc(var(--sheet) * var(--safe-t)),0) scale(calc(1 - var(--sheet) * .075));
   border-radius:calc(var(--sheet) * 14px);transition:transform .5s var(--ease),border-radius .5s var(--ease),opacity .3s ease}
 /* Finché l'app non ha disegnato il primo stato, la schermata resta nascosta: niente salti all'avvio. */
@@ -185,7 +185,7 @@ body.dragging #stage,body.dragging #stage::after,body.dragging .player{transitio
 .play-btn.is-playing .i-pause{opacity:1;transform:none}
 
 /* ---------- Player ---------- */
-.player{position:fixed;left:0;right:0;top:calc(var(--safe-t) + 10px);bottom:0;z-index:30;overflow:hidden;border-radius:14px 14px 0 0;
+.player{position:fixed;left:0;right:0;top:calc(var(--safe-t) + 10px);height:calc(var(--app-h,100vh) - var(--safe-t) - 10px);z-index:30;overflow:hidden;border-radius:14px 14px 0 0;
   background:var(--bg);color:var(--text);display:flex;flex-direction:column;visibility:hidden;touch-action:none;
   transform:translate3d(0,calc((1 - var(--sheet)) * 104%),0);transition:transform .5s var(--ease);box-shadow:0 -8px 40px rgba(0,0,0,.5)}
 .player.live{visibility:visible}
@@ -259,11 +259,11 @@ body.dragging #stage,body.dragging #stage::after,body.dragging .player{transitio
 .ab-text{margin:12px 0 0;min-height:18px;text-align:center;font-size:13px;color:rgba(255,255,255,.6)}
 
 /* ---------- Action sheet e toast ---------- */
-.sheet-backdrop{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);opacity:0;transition:opacity .3s}
+.sheet-backdrop{position:fixed;top:0;left:0;right:0;height:var(--app-h,100%);z-index:40;background:rgba(0,0,0,.45);opacity:0;transition:opacity .3s}
 .sheet-backdrop.show{opacity:1}
-.action-sheet{position:fixed;left:8px;right:8px;bottom:0;z-index:41;max-width:480px;margin:0 auto;padding-bottom:calc(var(--safe-b) + 8px);
-  transform:translate3d(0,110%,0);transition:transform .45s var(--ease)}
-.action-sheet.show{transform:none}
+.action-sheet{position:fixed;left:8px;right:8px;top:var(--app-h,100vh);z-index:41;max-width:480px;margin:0 auto;padding-bottom:calc(var(--safe-b) + 8px);
+  transform:translate3d(0,10px,0);transition:transform .45s var(--ease)}
+.action-sheet.show{transform:translate3d(0,-100%,0)}
 .as-group{border-radius:14px;overflow:hidden;background:rgba(40,40,44,.9);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
 .as-title{padding:14px 16px;text-align:center;font-size:13px;color:var(--muted);border-bottom:.5px solid var(--line)}
 .as-group button{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;text-align:center;font-size:19px;color:var(--accent);border-bottom:.5px solid var(--line);transition:background-color .15s}
@@ -306,7 +306,7 @@ body.dragging #stage,body.dragging #stage::after,body.dragging .player{transitio
 .mv button:active{color:var(--text)}
 .mv button:disabled{opacity:.25}
 
-.picker{position:fixed;inset:0;z-index:42;display:flex;flex-direction:column;background:var(--bg);visibility:hidden;
+.picker{position:fixed;top:0;left:0;right:0;height:var(--app-h,100%);z-index:42;display:flex;flex-direction:column;background:var(--bg);visibility:hidden;
   transform:translate3d(0,100%,0);transition:transform .5s var(--ease),visibility 0s .5s}
 .picker.show{transform:none;visibility:visible;transition:transform .5s var(--ease)}
 .picker-head{display:flex;align-items:center;justify-content:space-between;padding:calc(var(--safe-t) + 10px) 16px 6px;border-bottom:.5px solid var(--line);
@@ -321,7 +321,7 @@ body.dragging #stage,body.dragging #stage::after,body.dragging .player{transitio
 .pick-row.sel .check{background:var(--accent);border-color:var(--accent);color:var(--on-accent);transform:scale(1.08)}
 .as-group button .ck{display:flex;color:var(--accent)}
 
-.dlg{position:fixed;inset:0;z-index:55;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);opacity:0;transition:opacity .25s}
+.dlg{position:fixed;top:0;left:0;right:0;height:var(--app-h,100%);z-index:55;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);opacity:0;transition:opacity .25s}
 .dlg.show{opacity:1}
 .dlg-card{width:270px;border-radius:14px;overflow:hidden;text-align:center;background:rgba(40,40,44,.97);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
   transform:scale(1.14);transition:transform .4s var(--spring)}
