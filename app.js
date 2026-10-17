@@ -131,8 +131,8 @@ async function tintFromBlob(blob) {
 }
 function applyTint(t) {
   const { h, s } = t.tint || { h: hashHue(t.id), s: 60 };
-  player.style.setProperty('--tint1', `hsl(${h} ${clamp(s, 25, 70)}% 30%)`);
-  player.style.setProperty('--tint2', `hsl(${(h + 24) % 360} ${clamp(s, 20, 60)}% 11%)`);
+  root.style.setProperty('--tint1', `hsl(${h} ${clamp(s, 25, 70)}% 30%)`);
+  root.style.setProperty('--tint2', `hsl(${(h + 24) % 360} ${clamp(s, 20, 60)}% 11%)`);
 }
 const artData = new Map();
 const blobToDataURL = b => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.onerror = () => r(null); fr.readAsDataURL(b); });
@@ -403,6 +403,7 @@ function go(name) {
     t.classList.toggle('active', on);
     on ? t.setAttribute('aria-current', 'page') : t.removeAttribute('aria-current');
   });
+  $('.tabbar').style.setProperty('--ti', String(['library', 'playlists', 'sync'].indexOf(tab)));
   $('#nav-title').textContent = name === 'playlist' ? (getPl(state.plView)?.name || 'Playlist') : VIEW_TITLES[name];
   if (name === 'playlist') next.scrollTop = 0;
   if (name === 'playlists') renderPlaylists({ animate: true });
