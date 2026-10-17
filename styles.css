@@ -1,10 +1,10 @@
 /* Colori del player animabili (sfondo che cambia col brano) */
-@property --tint1 { syntax: '<color>'; inherits: true; initial-value: #3A1D14; }
+@property --tint1 { syntax: '<color>'; inherits: true; initial-value: #26262A; }
 @property --tint2 { syntax: '<color>'; inherits: true; initial-value: #16161A; }
 
 :root{
   --bg:#000000; --surface:#1C1C1E; --raised:#2C2C2E; --line:rgba(255,255,255,.1);
-  --text:#F5F5F7; --muted:#8E8E93; --accent:#FF7A59; --on-accent:#1A0B06; --red:#D70015;
+  --text:#F5F5F7; --muted:#8E8E93; --accent:#FFFFFF; --on-accent:#000000; --red:#D70015;
   --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
   --bar-h:62px; --bar-b:max(12px, calc(var(--safe-b) - 12px)); --tab-h:calc(var(--bar-h) + var(--bar-b));
   --glass:rgba(255,255,255,.07); --glass-strong:rgba(42,42,46,.62); --glass-line:rgba(255,255,255,.12);
@@ -98,7 +98,7 @@ body.dragging #stage,body.dragging #stage::after,body.dragging .player{transitio
 .title{font-size:17px;font-weight:500;transition:color .3s}
 .sub{font-size:15px;color:var(--muted)}
 .title,.sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.row-main.playing .title{color:var(--accent)}
+.row-main.playing .title{color:var(--accent);font-weight:700}
 .dur{font-size:15px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
 .eq{display:none;align-items:flex-end;justify-content:flex-end;gap:2px;height:14px;min-width:34px}
 .eq i{width:3px;height:100%;border-radius:1.5px;background:var(--accent);transform-origin:bottom;animation:eq .8s ease-in-out infinite alternate}
@@ -153,7 +153,7 @@ body.dragging #stage,body.dragging #stage::after,body.dragging .player{transitio
 .switch span::after{content:"";position:absolute;left:2px;top:2px;width:27px;height:27px;border-radius:50%;background:#fff;
   box-shadow:0 3px 8px rgba(0,0,0,.25);transition:transform .35s var(--spring)}
 .switch input:checked+span{background:var(--accent)}
-.switch input:checked+span::after{transform:translateX(20px)}
+.switch input:checked+span::after{transform:translateX(20px);background:var(--on-accent)}
 .switch input:focus-visible+span{outline:2px solid var(--text);outline-offset:2px}
 
 /* ---------- Tab bar e mini player ---------- */
@@ -236,7 +236,7 @@ body.dragging #stage,body.dragging #stage::after,body.dragging .player{transitio
 .scrubber:focus-visible .track{outline:2px solid #fff;outline-offset:4px}
 .fill{position:absolute;inset:0;background:rgba(255,255,255,.75);transform-origin:left center;transform:scaleX(0);transition:background-color .2s}
 .scrubber.active .fill{background:#fff}
-.ab-zone{position:absolute;top:0;bottom:0;z-index:1;background:var(--accent);opacity:.6}
+.ab-zone{position:absolute;top:0;bottom:0;z-index:1;background:repeating-linear-gradient(90deg,rgba(0,0,0,.6) 0 2px,rgba(255,255,255,.45) 2px 5px)}
 .times{display:flex;justify-content:space-between;margin-top:4px;font-size:12px;font-weight:600;color:rgba(255,255,255,.5);
   font-variant-numeric:tabular-nums;transition:color .2s}
 .scrubber.active+.times{color:#fff}

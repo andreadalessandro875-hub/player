@@ -87,7 +87,8 @@ function hashHue(s) {
 }
 const fallbackArt = id => {
   const h = hashHue(id);
-  return `linear-gradient(135deg, hsl(${h} 70% 56%), hsl(${(h + 70) % 360} 62% 38%))`;
+  const l = 40 + (h % 6) * 6;
+  return `linear-gradient(135deg, hsl(${h} 6% ${l}%), hsl(${h} 4% ${Math.round(l * 0.42)}%))`;
 };
 const artUrls = new Map();
 function artUrl(t) {
@@ -130,9 +131,9 @@ async function tintFromBlob(blob) {
   } catch { return null; } finally { URL.revokeObjectURL(u); }
 }
 function applyTint(t) {
-  const { h, s } = t.tint || { h: hashHue(t.id), s: 60 };
-  root.style.setProperty('--tint1', `hsl(${h} ${clamp(s, 25, 70)}% 30%)`);
-  root.style.setProperty('--tint2', `hsl(${(h + 24) % 360} ${clamp(s, 20, 60)}% 11%)`);
+  const { h, s } = t.tint || { h: hashHue(t.id), s: 0 };
+  root.style.setProperty('--tint1', `hsl(${h} ${clamp(s, 0, 38)}% 26%)`);
+  root.style.setProperty('--tint2', `hsl(${(h + 24) % 360} ${clamp(s, 0, 30)}% 10%)`);
 }
 const artData = new Map();
 const blobToDataURL = b => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.onerror = () => r(null); fr.readAsDataURL(b); });
@@ -145,8 +146,9 @@ async function artworkFor(t) {
   const h = hashHue(t.id), c = document.createElement('canvas');
   c.width = c.height = 512;
   const g = c.getContext('2d'), grad = g.createLinearGradient(0, 0, 512, 512);
-  grad.addColorStop(0, `hsl(${h} 70% 56%)`);
-  grad.addColorStop(1, `hsl(${(h + 70) % 360} 62% 38%)`);
+  const l = 40 + (h % 6) * 6;
+  grad.addColorStop(0, `hsl(${h} 6% ${l}%)`);
+  grad.addColorStop(1, `hsl(${h} 4% ${Math.round(l * 0.42)}%)`);
   g.fillStyle = grad;
   g.fillRect(0, 0, 512, 512);
   return [{ src: c.toDataURL('image/png'), sizes: '512x512', type: 'image/png' }];
