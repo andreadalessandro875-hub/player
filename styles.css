@@ -6,7 +6,7 @@
   --bg:#000000; --surface:#1C1C1E; --raised:#2C2C2E; --line:rgba(255,255,255,.1);
   --text:#F5F5F7; --muted:#8E8E93; --accent:#FFFFFF; --on-accent:#000000; --red:#D70015;
   --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
-  --bar-h:62px; --bar-b:max(12px, calc(var(--safe-b) - 12px)); --tab-h:calc(var(--bar-h) + var(--bar-b));
+  --bar-h:62px; --bar-b:max(8px, calc(var(--safe-b) - 24px)); --tab-h:calc(var(--bar-h) + var(--bar-b));
   --glass:rgba(255,255,255,.07); --glass-strong:rgba(42,42,46,.62); --glass-line:rgba(255,255,255,.12);
   --ease:cubic-bezier(.32,.72,0,1);          /* curva dei pannelli iOS */
   --spring:cubic-bezier(.34,1.4,.64,1);      /* rimbalzo leggero */
