@@ -14,6 +14,9 @@ Web app (PWA) per ascoltare i tuoi brani in loop, anche a schermo spento. HTML/J
 - Trascina in giù la Libreria per sincronizzare con Drive
 - Riprende l'ultimo brano e la posizione alla riapertura
 - Controlli sul Lock Screen e Control Center (Media Session API)
+- Sezione **Palestra** (file `gym.js`, indipendente dalla musica): scheda per giorno, serie da spuntare,
+  timer di recupero automatico con avviso sonoro, peso salvato per esercizio; le spunte si azzerano il giorno dopo.
+  Per modificare la scheda cambia l'elenco `GYM_PLAN` in `gym.js`
 - Importazione manuale dei file dal telefono
 - Sincronizzazione con una cartella di Google Drive (scarica solo i brani nuovi)
 - Funziona offline una volta installata

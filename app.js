@@ -49,6 +49,8 @@ const ICONS = {
   check: sw(18, '<path d="M5 12.5l4.5 4.5L19 7"/>', STROKE + ' stroke-width="3"'),
   up: sw(20, '<path d="M6 15l6-6 6 6"/>', STROKE + ' stroke-width="2.6"'),
   down: sw(20, '<path d="M6 9l6 6 6-6"/>', STROKE + ' stroke-width="2.6"'),
+  dumbbell: sw(26, '<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/>', STROKE + ' stroke-width="2.2"'),
+  close: sw(18, '<path d="M6 6l12 12M18 6L6 18"/>', STROKE + ' stroke-width="2.6"'),
   spinner: '<svg width="28" height="28" viewBox="0 0 28 28">' +
     Array.from({ length: 8 }, (_, i) => `<rect x="12.75" y="2" width="2.5" height="7" rx="1.25" fill="currentColor" opacity="${((i + 1) / 8).toFixed(2)}" transform="rotate(${i * 45} 14 14)"/>`).join('') + '</svg>'
 };
@@ -388,7 +390,7 @@ let activeView = $('#view-library');
 const ptr = $('#ptr');
 let ptrArmed = false, ptrBusy = false, touching = false, navTick = false;
 
-const VIEW_TITLES = { library: 'Libreria', playlists: 'Playlist', playlist: 'Playlist', sync: 'Sincronizza' };
+const VIEW_TITLES = { library: 'Libreria', playlists: 'Playlist', playlist: 'Playlist', gym: 'Palestra', sync: 'Sincronizza' };
 function go(name) {
   const next = $('#view-' + name);
   if (next === activeView) { next.scrollTo({ top: 0, behavior: 'smooth' }); return; }
@@ -405,12 +407,13 @@ function go(name) {
     t.classList.toggle('active', on);
     on ? t.setAttribute('aria-current', 'page') : t.removeAttribute('aria-current');
   });
-  $('.tabbar').style.setProperty('--ti', String(['library', 'playlists', 'sync'].indexOf(tab)));
+  $('.tabbar').style.setProperty('--ti', String(['library', 'playlists', 'gym', 'sync'].indexOf(tab)));
   $('#nav-title').textContent = name === 'playlist' ? (getPl(state.plView)?.name || 'Playlist') : VIEW_TITLES[name];
   if (name === 'playlist') next.scrollTop = 0;
   if (name === 'playlists') renderPlaylists({ animate: true });
   updateNav();
   if (name === 'sync') renderSync();
+  if (name === 'gym') renderGym();
 }
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-go]');
@@ -1299,6 +1302,7 @@ document.addEventListener('keydown', e => {
 const mini = $('#mini');
 let miniSwipe = 0, my = null;
 function showMini(on) {
+  document.body.classList.toggle('mini-on', !!on);
   if (on) {
     if (!mini.hidden && mini.classList.contains('show')) return;
     mini.hidden = false;
