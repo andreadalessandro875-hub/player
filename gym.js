@@ -3,51 +3,30 @@
    Sezione indipendente dalla musica, tenuta in un file a parte per poterla spostare facilmente.
    Usa gli aiuti globali di app.js ($, esc, fmt, lsGet, lsSet, haptic, toast, ICONS, actionSheet). */
 
+// Scheda a rotazione: si alternano i giorni nell'ordine dell'elenco.
 const GYM_PLAN = [
   {
-    key: 'tue', dow: 2, day: 'Martedì', short: 'Mar', tag: 'Lower A', title: 'Lower A + Tricipiti',
-    desc: 'Focus sulla spinta delle gambe. Avrai ben 3 giorni di riposo alle spalle, quindi sarai al massimo delle energie.',
+    key: 'g1', day: 'Giorno 1', short: 'Giorno 1', tag: 'Upper A', title: 'Upper Body',
+    desc: 'Spinta orizzontale/inclinata + trazione orizzontale.',
     ex: [
-      { n: 'Leg Press 45°', s: 4, r: '8', rest: 120, note: 'Discesa profonda e controllata, non staccare il sedere.' },
-      { n: 'Affondi Bulgari (manubri)', s: 3, r: '10 per gamba', rest: 90, note: 'Busto leggermente avanti per enfatizzare anche i glutei.' },
-      { n: 'Leg Extension', s: 3, r: '12-15', rest: 60, note: 'Trattieni 1 secondo di contrazione di picco in alto.' },
-      { n: 'Calf Machine (in piedi)', s: 4, r: '15', rest: 60, note: 'Scendi al massimo, fermati 1 secondo in allungamento.' },
-      { n: 'Pushdown con corda', s: 3, r: '12', rest: 90, note: 'Gomiti stretti al corpo, apri la corda alla fine del movimento.' },
-      { n: 'Tricipiti dietro nuca (manubrio o cavo)', s: 2, r: '12', rest: 60, note: 'Ottimo per allungare il capo lungo del tricipite.' }
+      { n: 'Panca Piana con Manubri', s: 4, r: '6-8', rest: 150, note: 'Esercizio cardine di spinta orizzontale per il petto e i tricipiti.' },
+      { n: 'Rematore su panca inclinata (manubri o bilanciere)', s: 4, r: '8-10', rest: 120, note: 'Trazione orizzontale per lo spessore della schiena, isolando la lombare.' },
+      { n: 'Chest Press Inclinata (macchina o manubri su panca inclinata)', s: 3, r: '8-10', rest: 105, note: 'Focus sulla parte clavicolare/alta del petto.' },
+      { n: 'Pulley basso (triangolo o sbarra stretta)', s: 3, r: '10-12', rest: 90, note: 'Trazione orizzontale complementare per il gran dorsale e romboidi.' },
+      { n: 'Shoulder Press a macchina', s: 3, r: '8-10', rest: 105, note: 'Spinta verticale per i deltoidi anteriori e laterali.' },
+      { n: 'Alzate laterali con manubri', s: 3, r: '12-15', rest: 60, note: 'Isolamento puro per il capo laterale del deltoide.' }
     ]
   },
   {
-    key: 'thu', dow: 4, day: 'Giovedì', short: 'Gio', tag: 'Upper A', title: 'Upper A (Focus Spinta)',
-    desc: 'Sessione dedicata alla spinta della parte alta e alla larghezza delle spalle.',
+    key: 'g2', day: 'Giorno 2', short: 'Giorno 2', tag: 'Upper B', title: 'Upper Body',
+    desc: 'Senza bicipiti e tricipiti.',
     ex: [
-      { n: 'Panca Piana (bilanciere o manubri)', s: 4, r: '8', rest: 120, note: 'Scapole addotte (chiuse), tocca il petto e spingi forte.' },
-      { n: 'Lat Machine avanti (presa prona)', s: 4, r: '8-10', rest: 120, note: 'Tira portando la sbarra verso la parte alta del petto.' },
-      { n: 'Lento Avanti (manubri su panca a 75°)', s: 3, r: '8-10', rest: 90, note: 'Gomiti leggermente chiusi in avanti (piano scapolare).' },
-      { n: 'Croci ai cavi alti', s: 3, r: '12', rest: 60, note: 'Focus sul pompaggio del petto, incrocia leggermente le mani.' },
-      { n: 'Alzate Laterali ai cavi', s: 3, r: '12', rest: 60, note: 'Cavo basso dietro la schiena. Tensione costante sul capo laterale.' }
-    ]
-  },
-  {
-    key: 'sat', dow: 6, day: 'Sabato', short: 'Sab', tag: 'Lower B', title: 'Lower B + Bicipiti',
-    desc: 'Focus sulla catena posteriore (femorali e glutei). Ottimo da fare di sabato perché hai tempo di recuperare senza la fretta dei giorni lavorativi.',
-    ex: [
-      { n: 'Stacco Rumeno (bilanciere o manubri)', s: 4, r: '8', rest: 120, note: 'Spingi il bacino indietro. Schiena dritta, senti stirare i femorali.' },
-      { n: 'Hip Thrust (bilanciere o macchina)', s: 3, r: '10-12', rest: 90, note: 'Blocca la contrazione dei glutei in alto per 1 secondo.' },
-      { n: 'Leg Curl (seduto o sdraiato)', s: 3, r: '12', rest: 60, note: 'Controlla la fase eccentrica (discesa del peso).' },
-      { n: 'Abductor Machine', s: 3, r: '15-20', rest: 60, note: 'Busto leggermente inclinato in avanti per isolare i glutei.' },
-      { n: 'Curl alternato con manubri', s: 3, r: '12', rest: 90, note: 'Ruota il palmo della mano verso l\'alto durante la salita.' },
-      { n: 'Hammer Curl', s: 2, r: '12', rest: 60, note: 'Presa a "martello" (palmi che si guardano). Focus avambracci.' }
-    ]
-  },
-  {
-    key: 'sun', dow: 0, day: 'Domenica', short: 'Dom', tag: 'Upper B', title: 'Upper B (Focus Trazione)',
-    desc: 'Le gambe oggi riposano. Ci concentriamo sulla schiena e sulla parte posteriore e laterale delle spalle (effetto 3D).',
-    ex: [
-      { n: 'Rematore con manubrio (o T-Bar)', s: 4, r: '8', rest: 120, note: 'Tira portando il manubrio verso l\'anca, non verso la spalla.' },
-      { n: 'Panca Inclinata 30° (manubri)', s: 4, r: '10', rest: 120, note: 'Focus sul petto alto e deltoide anteriore.' },
-      { n: 'Pulley Basso (presa stretta o barra)', s: 3, r: '10-12', rest: 90, note: 'Petto in fuori, chiudi forte le scapole quando arrivi alla pancia.' },
-      { n: 'Alzate Laterali con manubri', s: 4, r: '12-15', rest: 60, note: 'Spalle basse. Spingi i manubri verso l\'esterno, non verso l\'alto.' },
-      { n: 'Face Pull (cavo alto con corda)', s: 4, r: '15', rest: 60, note: 'Tira la corda verso la fronte, allargando i gomiti all\'indietro.' }
+      { n: 'Lat Machine (presa larga o inversa) o Trazioni alla sbarra', s: 4, r: '8-10', rest: 120, note: 'Trazione verticale fondamentale per la larghezza del dorso.' },
+      { n: 'Panca Inclinata con Bilanciere o Chest Press orizzontale a macchina', s: 3, r: '8-10', rest: 120, note: 'Variazione dell\'angolo di spinta rispetto alla panca piana con manubri del giorno 1.' },
+      { n: 'Rematore con Bilanciere a busto flesso o T-Bar Row', s: 3, r: '8-10', rest: 105, note: 'Trazione orizzontale pesante per lo spessore della schiena.' },
+      { n: 'Lento Avanti con Manubri da seduto', s: 3, r: '8-10', rest: 105, note: 'Spinta verticale libera per le spalle, diversa dalla shoulder press a macchina del giorno 1.' },
+      { n: 'Croci ai cavi alti o bassi o Pectoral Machine', s: 3, r: '12-15', rest: 75, note: 'Isolamento del petto in allungamento/contrazione.' },
+      { n: 'Face Pull ai cavi o Reverse Fly (alzate posteriori a 90°)', s: 3, r: '12-15', rest: 60, note: 'Cuffia dei rotatori e deltoidi posteriori per postura e salute della spalla.' }
     ]
   }
 ];
@@ -59,24 +38,28 @@ const gymSave = () => lsSet('gym', gym.data);
 const gymDay = () => GYM_PLAN.find(p => p.key === gym.sel);
 const restLabel = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 function gymDone(key) {
-  if (gym.data.doneDate[key] !== gymToday()) { gym.data.done[key] = {}; gym.data.doneDate[key] = gymToday(); }
+  const dt = gym.data;
+  dt.done = dt.done || {}; dt.doneDate = dt.doneDate || {}; dt.kg = dt.kg || {};
+  if (dt.doneDate[key] !== gymToday() || !dt.done[key]) { dt.done[key] = {}; dt.doneDate[key] = gymToday(); }
   return gym.data.done[key];
 }
-// Oggi se è un giorno di allenamento, altrimenti il prossimo.
+// Proposto all'apertura: se oggi ti sei già allenato resta quel giorno, altrimenti il successivo della rotazione.
 function gymDefaultDay() {
-  const dow = new Date().getDay();
-  let best = GYM_PLAN[0], dist = 8;
-  for (const p of GYM_PLAN) { const d = (p.dow - dow + 7) % 7; if (d < dist) { dist = d; best = p; } }
-  return best.key;
+  const last = gym.data.last;
+  const i = last ? GYM_PLAN.findIndex(p => p.key === last.key) : -1;
+  if (i < 0) return GYM_PLAN[0].key;
+  if (last.date === gymToday()) return last.key;
+  return GYM_PLAN[(i + 1) % GYM_PLAN.length].key;
 }
 
 function renderGym() {
   if (!gym.sel) gym.sel = gymDefaultDay();
-  const d = gymDay(), done = gymDone(d.key), dow = new Date().getDay();
+  const d = gymDay(), done = gymDone(d.key), next = gymDefaultDay();
+  $('#gym-seg').style.gridTemplateColumns = `repeat(${GYM_PLAN.length}, minmax(0, 1fr))`;
   $('#gym-seg').innerHTML = GYM_PLAN.map(p => `
     <button class="seg-btn${p.key === d.key ? ' on' : ''}" data-day="${p.key}" aria-pressed="${p.key === d.key}">
       <span class="seg-d">${p.short}</span><span class="seg-t">${p.tag}</span>
-      ${p.dow === dow ? '<i class="seg-today" aria-label="oggi"></i>' : ''}
+      ${p.key === next ? '<i class="seg-today" aria-label="giorno proposto"></i>' : ''}
     </button>`).join('');
   $('#gym-day').innerHTML = `
     <h2 class="gym-title">${esc(d.day)} · ${esc(d.title)}</h2>
@@ -127,7 +110,7 @@ gymView.addEventListener('click', e => {
   const setBtn = e.target.closest('[data-set]');
   if (!setBtn) return;
   const d = gymDay(), done = gymDone(d.key), id = setBtn.dataset.set, on = !done[id];
-  if (on) done[id] = 1; else delete done[id];
+  if (on) { done[id] = 1; gym.data.last = { key: d.key, date: gymToday() }; } else delete done[id];
   gymSave();
   haptic();
   setBtn.classList.toggle('on', on);
@@ -153,7 +136,7 @@ $('#gym-reset').addEventListener('click', async () => {
   const d = gymDay();
   if (!d) return;
   haptic();
-  const k = await actionSheet(`Azzerare le serie di ${d.day.toLowerCase()}? I pesi restano salvati.`, [{ k: 'ok', label: 'Azzera serie', danger: true }]);
+  const k = await actionSheet(`Azzerare le serie del ${d.day.toLowerCase()}? I pesi restano salvati.`, [{ k: 'ok', label: 'Azzera serie', danger: true }]);
   if (k !== 'ok') return;
   gym.data.done[d.key] = {};
   gymSave();
