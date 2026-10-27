@@ -3,10 +3,10 @@
    Sezione indipendente dalla musica, tenuta in un file a parte per poterla spostare facilmente.
    Usa gli aiuti globali di app.js ($, esc, fmt, lsGet, lsSet, haptic, toast, ICONS, actionSheet). */
 
-// Scheda a rotazione: si alternano i giorni nell'ordine dell'elenco.
+// Scheda a rotazione: si alternano i giorni nell'ordine dell'elenco (Upper 1, Lower 1, Upper 2, Lower 2).
 const GYM_PLAN = [
   {
-    key: 'g1', day: 'Giorno 1', short: 'Giorno 1', tag: 'Upper A', title: 'Upper Body',
+    key: 'g1', day: 'Upper 1', short: 'Upper 1', tag: 'Spinta', title: 'Upper Body',
     desc: 'Spinta orizzontale/inclinata + trazione orizzontale.',
     ex: [
       { n: 'Panca Piana con Manubri', s: 4, r: '6-8', rest: 150, note: 'Esercizio cardine di spinta orizzontale per il petto e i tricipiti.' },
@@ -18,15 +18,41 @@ const GYM_PLAN = [
     ]
   },
   {
-    key: 'g2', day: 'Giorno 2', short: 'Giorno 2', tag: 'Upper B', title: 'Upper Body',
+    key: 'l1', day: 'Lower 1', short: 'Lower 1', tag: 'Quadricipiti', title: 'Quadricipiti + Bicipiti',
+    desc: 'Focus quadricipiti con richiamo femorali, poi bicipiti.',
+    ex: [
+      { n: 'Squat con Bilanciere (o Hack Squat)', s: 4, r: '6-8', rest: 150, note: 'Quadricipiti, carico pesante.' },
+      { n: 'Leg Press 45°', s: 3, r: '10-12', rest: 120, note: 'Quadricipiti.' },
+      { n: 'Affondi camminati con manubri', s: 3, r: '12 passi totali', rest: 90, note: 'Quadricipiti e glutei.' },
+      { n: 'Leg Curl seduto o sdraiato (richiamo)', s: 3, r: '12-15', rest: 75, note: 'Femorali: focus su contrazione e pompaggio, senza sfinirsi.' },
+      { n: 'Curl con Bilanciere EZ', s: 3, r: '10-12', rest: 75, note: 'Bicipiti.' },
+      { n: 'Hammer Curl con manubri', s: 3, r: '12', rest: 75, note: 'Bicipiti.' },
+      { n: 'Calf Machine seduto', s: 4, r: '15', rest: 60, note: 'Polpacci.' }
+    ]
+  },
+  {
+    key: 'g2', day: 'Upper 2', short: 'Upper 2', tag: 'Dorso', title: 'Upper Body',
     desc: 'Senza bicipiti e tricipiti.',
     ex: [
       { n: 'Lat Machine (presa larga o inversa) o Trazioni alla sbarra', s: 4, r: '8-10', rest: 120, note: 'Trazione verticale fondamentale per la larghezza del dorso.' },
-      { n: 'Panca Inclinata con Bilanciere o Chest Press orizzontale a macchina', s: 3, r: '8-10', rest: 120, note: 'Variazione dell\'angolo di spinta rispetto alla panca piana con manubri del giorno 1.' },
+      { n: 'Panca Inclinata con Bilanciere o Chest Press orizzontale a macchina', s: 3, r: '8-10', rest: 120, note: 'Variazione dell\'angolo di spinta rispetto alla panca piana con manubri dell\'Upper 1.' },
       { n: 'Rematore con Bilanciere a busto flesso o T-Bar Row', s: 3, r: '8-10', rest: 105, note: 'Trazione orizzontale pesante per lo spessore della schiena.' },
-      { n: 'Lento Avanti con Manubri da seduto', s: 3, r: '8-10', rest: 105, note: 'Spinta verticale libera per le spalle, diversa dalla shoulder press a macchina del giorno 1.' },
+      { n: 'Lento Avanti con Manubri da seduto', s: 3, r: '8-10', rest: 105, note: 'Spinta verticale libera per le spalle, diversa dalla shoulder press a macchina dell\'Upper 1.' },
       { n: 'Croci ai cavi alti o bassi o Pectoral Machine', s: 3, r: '12-15', rest: 75, note: 'Isolamento del petto in allungamento/contrazione.' },
       { n: 'Face Pull ai cavi o Reverse Fly (alzate posteriori a 90°)', s: 3, r: '12-15', rest: 60, note: 'Cuffia dei rotatori e deltoidi posteriori per postura e salute della spalla.' }
+    ]
+  },
+  {
+    key: 'l2', day: 'Lower 2', short: 'Lower 2', tag: 'Femorali', title: 'Femorali/Glutei + Tricipiti',
+    desc: 'Focus femorali e glutei con richiamo quadricipiti, poi tricipiti.',
+    ex: [
+      { n: 'Stacco Rumeno (bilanciere o manubri)', s: 4, r: '8', rest: 150, note: 'Femorali, carico pesante.' },
+      { n: 'Hip Thrust', s: 3, r: '8-10', rest: 120, note: 'Glutei e femorali.' },
+      { n: 'Bulgarian Split Squat', s: 3, r: '10 per gamba', rest: 90, note: 'Femorali e glutei.' },
+      { n: 'Leg Extension (richiamo)', s: 3, r: '12-15', rest: 75, note: 'Quadricipiti: isolamento puro per rifinire e pompare il muscolo a fine seduta.' },
+      { n: 'Pushdown ai cavi con corda', s: 3, r: '10-12', rest: 75, note: 'Tricipiti.' },
+      { n: 'French Press con manubri su panca', s: 3, r: '10-12', rest: 75, note: 'Tricipiti.' },
+      { n: 'Calf Machine in piedi', s: 4, r: '12', rest: 60, note: 'Polpacci.' }
     ]
   }
 ];
