@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Loop",
+    "slug": "loop-player",
+    "scheme": "loopplayer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#000000",
+    "ios": {
+      "bundleIdentifier": "com.andreadalessandro.loopplayer",
+      "supportsTablet": false,
+      "infoPlist": {
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true,
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "plugins": [
+      "expo-router",
+      ["expo-audio", { "enableBackgroundPlayback": true, "microphonePermission": false }],
+      "expo-image",
+      ["expo-splash-screen", { "backgroundColor": "#000000", "image": "./assets/splash-icon.png", "imageWidth": 110 }],
+      "expo-status-bar"
+    ]
+  }
+}

@@ -56,3 +56,8 @@ L'app chiede solo l'accesso in **sola lettura** (`drive.readonly`).
   può esserci un'impercettibile pausa, dipende dal formato (MP3 più marcata di M4A/WAV).
 - Da verificare su iPhone reale: riproduzione ininterrotta con schermo spento per 30–60 minuti
   e passaggio automatico al brano successivo in background.
+
+## App iOS nativa
+Nella cartella `native/` c'è la versione nativa per iPhone (React Native + Expo).
+Istruzioni in [native/README.md](native/README.md). La compilazione avviene su GitHub Actions
+(workflow *Build iOS*), la cartella è esclusa dalla pubblicazione su Vercel.
