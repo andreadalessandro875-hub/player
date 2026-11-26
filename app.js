@@ -87,11 +87,8 @@ function hashHue(s) {
   h = Math.imul(h, 2246822507) >>> 0;
   return (h ^ (h >>> 16)) % 360;
 }
-const fallbackArt = id => {
-  const h = hashHue(id);
-  // copertine di riserva in toni tenui, intonati al lino
-  return `linear-gradient(135deg, hsl(${h} 24% 70%), hsl(${(h + 25) % 360} 18% 48%))`;
-};
+// Copertina di riserva per i brani senza immagine: riquadro sabbia con la nota color mattone.
+const fallbackArtNode = cls => `<div class="${cls} art-fb" aria-hidden="true">${ICONS.music}</div>`;
 const artUrls = new Map();
 function artUrl(t) {
   if (!t.art) return null;
@@ -105,7 +102,7 @@ function dropArt(id) {
 }
 const artNode = (t, cls) => {
   const u = artUrl(t);
-  return u ? `<img class="${cls}" src="${u}" alt="" decoding="async">` : `<div class="${cls}" style="background:${fallbackArt(t.id)}"></div>`;
+  return u ? `<img class="${cls}" src="${u}" alt="" decoding="async">` : fallbackArtNode(cls);
 };
 function rgbToHs(r, g, b) {
   r /= 255; g /= 255; b /= 255;
@@ -133,7 +130,7 @@ async function tintFromBlob(blob) {
   } catch { return null; } finally { URL.revokeObjectURL(u); }
 }
 function applyTint(t) {
-  const { h, s } = t.tint || { h: hashHue(t.id), s: 20 };
+  const { h, s } = t.tint || { h: 34, s: 22 };
   // bagliori chiari e poco saturi, presi dal colore della copertina
   root.style.setProperty('--tint1', `hsl(${h} ${clamp(s, 12, 38)}% 82%)`);
   root.style.setProperty('--tint2', `hsl(${(h + 30) % 360} ${clamp(s, 10, 28)}% 88%)`);
@@ -146,13 +143,20 @@ async function artworkFor(t) {
     const d = artData.get(t.id);
     if (d) return [{ src: d, sizes: '512x512', type: t.art.type || 'image/jpeg' }];
   }
-  const h = hashHue(t.id), c = document.createElement('canvas');
+  const c = document.createElement('canvas');
   c.width = c.height = 512;
-  const g = c.getContext('2d'), grad = g.createLinearGradient(0, 0, 512, 512);
-  grad.addColorStop(0, `hsl(${h} 24% 70%)`);
-  grad.addColorStop(1, `hsl(${(h + 25) % 360} 18% 48%)`);
-  g.fillStyle = grad;
+  const g = c.getContext('2d');
+  g.fillStyle = '#E2DACC';
   g.fillRect(0, 0, 512, 512);
+  // nota musicale (stesso disegno dell'icona, viewBox 24) centrata al 42%
+  const k = 512 * 0.42 / 24, o = (512 - 24 * k) / 2;
+  g.setTransform(k, 0, 0, k, o, o);
+  g.strokeStyle = '#A85F4B';
+  g.lineWidth = 2;
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  g.stroke(new Path2D('M9 18V6l10-2v12'));
+  for (const [x, y] of [[6.5, 18], [16.5, 16]]) { g.beginPath(); g.arc(x, y, 2.5, 0, Math.PI * 2); g.stroke(); }
   return [{ src: c.toDataURL('image/png'), sizes: '512x512', type: 'image/png' }];
 }
 
@@ -1219,7 +1223,7 @@ function renderSync() {
   $('#new-title').textContent = `Nuovi brani trovati · ${entries.length}`;
   $('#sync-list').innerHTML = entries.map(([id, p], i) => `
     <div class="sync-item${p.done ? ' done' : ''}" data-pid="${esc(id)}" style="animation-delay:${Math.min(i, 10) * 30}ms">
-      <div class="art" style="background:${fallbackArt('d_' + id)}"></div>
+      ${fallbackArtNode('art')}
       <div class="grow"><span>${esc(p.file.name)}</span><div class="bar"><div style="width:${p.pct * 100}%"></div></div></div>
       <span class="st">${esc(p.st)}</span>
     </div>`).join('');
