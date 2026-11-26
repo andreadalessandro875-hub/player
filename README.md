@@ -11,7 +11,7 @@ Web app (PWA) per ascoltare i tuoi brani in loop, anche a schermo spento. HTML/J
 - Trascina in giù la Libreria per sincronizzare con Drive
 - Riprende l'ultimo brano e la posizione alla riapertura
 - Controlli sul Lock Screen e Control Center (Media Session API)
-- Importazione manuale dei file dal telefono
+
 - Sincronizzazione con una cartella di Google Drive (scarica solo i brani nuovi)
 - Funziona offline una volta installata
 

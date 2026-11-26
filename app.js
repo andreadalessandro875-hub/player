@@ -1039,26 +1039,6 @@ async function updateMediaMeta(t) {
   navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: t.artist, album: 'Loop Player', artwork });
 }
 
-/* ================= Importazione manuale ================= */
-$('#btn-import').addEventListener('click', () => $('#file-input').click());
-$('#file-input').addEventListener('change', async e => {
-  const files = [...e.target.files];
-  e.target.value = '';
-  if (!files.length) return;
-  toast(files.length === 1 ? 'Importazione in corso…' : `Importazione di ${files.length} brani…`);
-  let n = 0;
-  for (const f of files) {
-    if (state.tracks.some(t => t.filename === f.name && t.size === f.size)) continue;
-    try { await addTrack({ id: crypto.randomUUID(), filename: f.name, blob: f }); n++; } catch { /* file non salvabile */ }
-  }
-  rebuildOrder();
-  go('library');
-  renderLibrary({ animate: true });
-  renderStorage();
-  haptic();
-  toast(n ? `${n} ${n === 1 ? 'brano aggiunto' : 'brani aggiunti'}` : 'Nessun brano nuovo');
-});
-
 /* ================= Google Drive ================= */
 const drive = { token: null, exp: 0, client: null, remote: [], progress: {}, stats: null, busy: false };
 const savedToken = lsGet('gtoken', null);
@@ -1246,19 +1226,17 @@ function renderSync() {
   const ok = tokenValid();
   $('#sync-badge').textContent = ok ? 'Collegata' : CFG.GOOGLE_CLIENT_ID ? 'Da collegare' : 'Non configurata';
   $('#sync-badge').classList.toggle('on', ok);
-  $('#folder-name').textContent = `Cartella “${CFG.DRIVE_FOLDER_NAME || 'Loop Player'}”`;
+  $('#folder-name').textContent = CFG.DRIVE_FOLDER_NAME || 'Loop Player';
   const last = lsGet('lastSync', 0);
-  $('#last-sync').textContent = (last ? new Date(last).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' }) : 'mai') +
-    ` · ${state.tracks.length} brani sul telefono`;
+  $('#last-sync').textContent = last
+    ? `Ultimo controllo ${new Date(last).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })} · ${state.tracks.length} brani`
+    : 'Mai sincronizzata';
   $('#auto-sync').checked = lsGet('autoSync', false);
   renderStorage();
 }
-async function renderStorage() {
-  const used = state.tracks.reduce((s, t) => s + t.size, 0);
-  let quota = 0;
-  try { quota = (await navigator.storage.estimate()).quota || 0; } catch { /* non disponibile */ }
-  $('#storage-text').textContent = fmtSize(used) + ' di musica';
-  $('#storage-bar').style.width = quota ? Math.max(used ? 1 : 0, Math.min(100, used / quota * 100)) + '%' : '0%';
+function renderStorage() {
+  const used = state.tracks.reduce((sum, t) => sum + t.size, 0);
+  $('#storage-text').textContent = used ? `Sul telefono occupano ${fmtSize(used)}.` : '';
 }
 
 /* ================= Avvio ================= */

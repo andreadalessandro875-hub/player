@@ -11,9 +11,9 @@
 <meta name="apple-mobile-web-app-title" content="Loop">
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-180.png?v=20">
+<link rel="apple-touch-icon" href="icons/icon-180.png?v=21">
 <script>document.documentElement.classList.add('booting');setTimeout(function(){document.documentElement.classList.remove('booting')},2500);</script>
-<link rel="stylesheet" href="styles.css?v=20">
+<link rel="stylesheet" href="styles.css?v=21">
 <title>Loop Player</title>
 </head>
 <body>
@@ -44,8 +44,8 @@
     <div id="empty" class="empty" hidden>
       <div class="empty-ico"><span data-icon="musicLg"></span></div>
       <h2 class="empty-title">La tua libreria è vuota</h2>
-      <p>Aggiungi brani dal telefono o sincronizza la cartella “Loop Player” di Google Drive.</p>
-      <button class="btn primary tap" data-go="sync">Aggiungi brani</button>
+      <p>Copia i brani dal PC nella cartella “Loop Player” su Google Drive, poi sincronizza.</p>
+      <button class="btn primary tap" data-go="sync">Vai a Sincronizza</button>
     </div>
   </section>
 
@@ -56,40 +56,28 @@
       <div class="row-card">
         <div class="tile"><span data-icon="folder"></span></div>
         <div class="grow">
-          <strong id="folder-name">Cartella “Loop Player”</strong>
-          <span class="muted" id="sync-sub">Google Drive</span>
+          <strong id="folder-name">Loop Player</strong>
+          <span class="muted" id="last-sync">Mai sincronizzata</span>
         </div>
         <span id="sync-badge" class="badge">Non collegata</span>
       </div>
-      <hr>
-      <div class="grow">
-        <strong>Ultimo controllo</strong>
-        <span class="muted" id="last-sync">mai</span>
-      </div>
       <button id="btn-sync" class="btn primary tap"><span class="sync-ico" data-icon="sync"></span><span id="sync-label">Sincronizza ora</span></button>
+      <p id="sync-sub" class="sync-sub muted"></p>
       <p id="sync-error" class="error" hidden></p>
+      <hr>
+      <div class="row-card">
+        <div class="grow">
+          <strong>Sincronizza all’apertura</strong>
+          <span class="muted">Scarica da solo i brani nuovi</span>
+        </div>
+        <label class="switch"><input id="auto-sync" type="checkbox" aria-label="Sincronizza all’apertura"><span></span></label>
+      </div>
     </div>
 
     <h2 id="new-title" class="section" hidden>Nuovi brani trovati</h2>
     <div id="sync-list" class="sync-list"></div>
 
-    <div class="card inline">
-      <div class="grow">
-        <strong>Sincronizza all’apertura</strong>
-        <span class="muted">Scarica solo i brani nuovi</span>
-      </div>
-      <label class="switch"><input id="auto-sync" type="checkbox" aria-label="Sincronizza all’apertura"><span></span></label>
-    </div>
-
-    <div class="storage">
-      <div class="between"><strong>Spazio sul telefono</strong><span class="muted" id="storage-text">—</span></div>
-      <div class="bar"><div id="storage-bar"></div></div>
-    </div>
-
-    <button id="btn-import" class="btn ghost tap"><span data-icon="folder"></span>Aggiungi file dal telefono</button>
-    <input id="file-input" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac" multiple hidden>
-
-    <p class="note">Per aggiungere musica dal PC copia i file nella cartella “Loop Player” su Google Drive. Puoi anche trascinare verso il basso la Libreria per sincronizzare.</p>
+    <p class="note">Copia i brani dal PC nella cartella “Loop Player” su Google Drive, poi tocca Sincronizza ora o trascina verso il basso la Libreria. <span id="storage-text"></span></p>
   </section>
 
   <div id="mini" class="mini" hidden>
@@ -157,7 +145,7 @@
 <label id="haptic" class="haptic" aria-hidden="true"><input type="checkbox" switch tabindex="-1"></label>
 <audio id="audio" preload="auto" playsinline></audio>
 
-<script src="config.js?v=20"></script>
-<script src="app.js?v=20"></script>
+<script src="config.js?v=21"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>
