@@ -309,14 +309,32 @@ const state = {
 const currentTrack = () => state.tracks.find(t => t.id === state.current);
 const sortTracks = () => state.tracks.sort((a, b) => a.title.localeCompare(b.title, 'it', { sensitivity: 'base' }));
 
-function rebuildOrder(keepCurrent = true) {
+const shuffleInPlace = a => { for (let i = a.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [a[i], a[k]] = [a[k], a[i]]; } return a; };
+
+/* Ordine di riproduzione.
+   - Casuale spento: è l'ordine della lista (alfabetico per titolo).
+   - Casuale acceso: una permutazione che resta FISSA finché casuale resta acceso. Se arrivano o spariscono
+     brani (sincronizzazione, eliminazione) si aggiornano solo quelli, senza rimescolare tutto.
+   - reshuffle: nuova permutazione; con keepCurrent il brano in corso diventa il primo. */
+function rebuildOrder({ reshuffle = false, keepCurrent = true } = {}) {
   const ids = state.tracks.map(t => t.id);
-  if (state.shuffle) {
-    for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-    const k = ids.indexOf(state.current);
-    if (keepCurrent && k > 0) { ids.splice(k, 1); ids.unshift(state.current); }
+  if (!state.shuffle) {
+    state.order = ids;
+  } else {
+    const known = new Set(ids);
+    let ord = reshuffle ? [] : state.order.filter(id => known.has(id));
+    const inOrd = new Set(ord);
+    const missing = shuffleInPlace(ids.filter(id => !inOrd.has(id)));
+    if (!ord.length) ord = missing;
+    else {
+      // i nuovi brani entrano in punti casuali DOPO quello in corso
+      const pos = Math.max(0, ord.indexOf(state.current));
+      for (const id of missing) ord.splice(pos + 1 + Math.floor(Math.random() * (ord.length - pos)), 0, id);
+    }
+    const k = ord.indexOf(state.current);
+    if (reshuffle && keepCurrent && k > 0) { ord.splice(k, 1); ord.unshift(state.current); }
+    state.order = ord;
   }
-  state.order = ids;
   if (state.current) prefetchNext();
 }
 function parseName(filename) {
@@ -560,27 +578,26 @@ function renderLibrary({ animate = false } = {}) {
 $('#search').addEventListener('input', e => { state.query = e.target.value; renderLibrary(); });
 $('#search').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 $('#btn-edit').addEventListener('click', () => { state.editing = !state.editing; haptic(); renderLibrary(); });
+// "Riproduci": tutta la lista in ordine, dal primo brano.
 $('#btn-playall').addEventListener('click', () => {
   if (!state.tracks.length) return;
   haptic();
-  setShuffle(false, true);
+  setShuffle(false, { quiet: true });
   load(state.order[0]);
 });
+// "Casuale": accende la riproduzione casuale e parte da un brano a caso.
 $('#btn-shuffleall').addEventListener('click', () => {
   if (!state.tracks.length) return;
   haptic();
-  state.shuffle = true;
-  lsSet('shuffle', true);
-  rebuildOrder(false);
-  renderShuffle();
+  setShuffle(true, { quiet: true, keepCurrent: false });
   load(state.order[0]);
   toast('Riproduzione casuale');
 });
 
-// Avvia un brano: la coda è sempre l'intera libreria.
+// Toccare un brano lo avvia e spegne la riproduzione casuale: da lì si prosegue nell'ordine della lista
+// (oppure resta in loop da solo se è attivo "Loop brano").
 function playFrom(id) {
-  state.current = id;
-  rebuildOrder(true);
+  setShuffle(false, { quiet: true });
   load(id);
 }
 bindList(list, {
@@ -642,7 +659,8 @@ async function prefetchNext() {
   if (!blob || tok !== preTok) return;
   pre = { id, url: URL.createObjectURL(blob) };
 }
-function startTrack(t, url, { autoplay = true, at = 0, dir = 0 } = {}) {
+function startTrack(t, url, opts = {}) {
+  const { autoplay = true, at = 0, dir = 0 } = opts;
   if (objUrl && objUrl !== url) URL.revokeObjectURL(objUrl);
   objUrl = url;
   state.current = t.id;
@@ -660,18 +678,29 @@ function startTrack(t, url, { autoplay = true, at = 0, dir = 0 } = {}) {
   lsSet('last', { id: t.id, t: at });
   paintProgress();
   prefetchNext();
+  if (!opts.auto) brokenStreak = 0;
 }
+let loadTok = 0;
 async function load(id, opts = {}) {
   const t = state.tracks.find(x => x.id === id);
   if (!t) return;
+  const tok = ++loadTok;   // vale solo l'ultima richiesta: se tocchi due brani di fila, vince il secondo
   let url;
   if (pre && pre.id === id) { url = pre.url; pre = null; }   // già pronto: parte in modo sincrono
   else {
-    const blob = await dbBlob(id);
-    if (!blob) { toast('File del brano non trovato'); return; }
+    let blob = null;
+    try { blob = await dbBlob(id); } catch { /* archivio non disponibile */ }
+    if (tok !== loadTok) return;
+    if (!blob) { toast('File del brano non trovato'); if (opts.auto) skipBroken(); return; }
     url = URL.createObjectURL(blob);
   }
   startTrack(t, url, opts);
+}
+// Se un brano non si riesce a leggere si passa al successivo, senza girare all'infinito.
+let brokenStreak = 0;
+function skipBroken() {
+  if (++brokenStreak >= state.order.length) { brokenStreak = 0; audio.pause(); return; }
+  setTimeout(() => step(1, true), 300);
 }
 function applyTrackUI(t, dir = 0) {
   $('#p-title').textContent = t.title;
@@ -685,16 +714,19 @@ function applyTrackUI(t, dir = 0) {
   void coverWrap.offsetWidth;
   coverWrap.classList.add(dir > 0 ? 'in-right' : dir < 0 ? 'in-left' : 'in');
 }
+/* Passa al brano successivo (dir = 1) o precedente (dir = -1) nell'ordine di riproduzione.
+   auto = fine naturale del brano: con "Loop spento" alla fine della lista ci si ferma. */
 function step(dir, auto = false) {
   const ord = state.order;
   if (!ord.length) return;
-  let n = ord.indexOf(state.current) + dir;
+  const i = ord.indexOf(state.current);
+  let n = i < 0 ? (dir > 0 ? 0 : ord.length - 1) : i + dir;
   if (n >= ord.length) {
     if (auto && state.mode === 'off') { audio.pause(); audio.currentTime = 0; return; }
     n = 0;
   }
   if (n < 0) n = ord.length - 1;
-  load(ord[n], { dir });
+  load(ord[n], { dir, auto });
 }
 function prev() {
   if (audio.currentTime > 3) { audio.currentTime = 0; paintProgress(); } else step(-1);
@@ -745,10 +777,15 @@ audio.addEventListener('play', () => { renderPlayState(); startTick(); });
 audio.addEventListener('pause', () => { renderPlayState(); paintProgress(); });
 audio.addEventListener('loadedmetadata', () => { lastSec = -1; paintProgress(); renderAB(); });
 audio.addEventListener('seeked', () => { if (!scrubbing) paintProgress(); });
-audio.addEventListener('error', () => { if (audio.getAttribute('src')) toast('Impossibile riprodurre questo file'); });
+audio.addEventListener('error', () => {
+  if (!audio.getAttribute('src')) return;
+  toast('Impossibile riprodurre questo file');
+  if (state.order.length > 1) skipBroken();
+});
 audio.addEventListener('ended', () => {
-  if (state.mode === 'all') step(1, true);
-  else if (state.mode === 'off') step(1, true);
+  // "Loop brano" usa audio.loop e non arriva qui; per sicurezza lo si riavvia comunque
+  if (state.mode === 'one') { audio.currentTime = 0; audio.play().catch(() => {}); return; }
+  step(1, true);
 });
 // timeupdate continua anche a schermo spento: qui si gestiscono A–B, timer e salvataggio.
 audio.addEventListener('timeupdate', () => {
@@ -889,30 +926,46 @@ function renderLoop() {
   $('#loop-text').textContent = txt;
   b.setAttribute('aria-label', txt + ', tocca per cambiare');
 }
+/* ===== Impostazioni di riproduzione: unico punto in cui cambiano Casuale e Loop =====
+   - Casuale è globale (vale per tutta la libreria) e si cambia solo con setShuffle().
+   - "Loop brano" e Casuale si escludono: attivare Loop brano spegne Casuale;
+     attivare Casuale con Loop brano attivo passa a "Loop tutti".
+   - Casuale spento e nessun Loop brano: si segue l'ordine della lista. */
+function setMode(mode, { quiet = false } = {}) {
+  state.mode = mode;
+  lsSet('mode', mode);
+  audio.loop = mode === 'one';
+  if (mode === 'one' && state.shuffle) {
+    setShuffle(false, { quiet: true });
+    if (!quiet) toast('Loop brano: riproduzione casuale disattivata');
+  }
+  renderLoop();
+}
+function setShuffle(on, { quiet = false, keepCurrent = true } = {}) {
+  const changed = on !== state.shuffle;
+  state.shuffle = on;
+  lsSet('shuffle', on);
+  if (on && state.mode === 'one') setMode('all', { quiet: true });
+  // accendendo si crea una nuova sequenza casuale; spegnendo si torna all'ordine della lista
+  rebuildOrder({ reshuffle: on && (changed || !keepCurrent), keepCurrent });
+  renderShuffle();
+  if (!quiet && changed) toast(on ? 'Riproduzione casuale attiva' : 'Riproduzione in ordine');
+}
 $('#btn-loop').addEventListener('click', () => {
-  state.mode = state.mode === 'one' ? 'all' : state.mode === 'all' ? 'off' : 'one';
-  lsSet('mode', state.mode);
-  audio.loop = state.mode === 'one';
   loopRot += 180;
   $('#btn-loop svg').style.transform = `rotate(${loopRot}deg)`;
   haptic();
-  renderLoop();
+  setMode(state.mode === 'one' ? 'all' : state.mode === 'all' ? 'off' : 'one');
 });
 function renderShuffle() {
-  const b = $('#btn-shuffle');
-  b.classList.toggle('on', state.shuffle);
-  b.setAttribute('aria-pressed', String(state.shuffle));
-}
-function setShuffle(on, fromStart = false) {
-  state.shuffle = on;
-  lsSet('shuffle', on);
-  rebuildOrder(!fromStart);
-  renderShuffle();
+  for (const b of [$('#btn-shuffle'), $('#btn-shuffleall')]) {
+    b.classList.toggle('on', state.shuffle);
+    b.setAttribute('aria-pressed', String(state.shuffle));
+  }
 }
 $('#btn-shuffle').addEventListener('click', () => {
   haptic();
   setShuffle(!state.shuffle);
-  toast(state.shuffle ? 'Riproduzione casuale attiva' : 'Riproduzione in ordine');
 });
 function renderAB() {
   const { a, b } = state.ab, d = audio.duration;
@@ -1173,7 +1226,7 @@ async function syncNow() {
       renderSyncProgress();
     }
     lsSet('lastSync', Date.now());
-    if (added) { rebuildOrder(); renderLibrary({ animate: true }); }
+    if (added) { rebuildOrder(); renderLibrary({ animate: true }); }   // i nuovi brani si aggiungono senza rimescolare
     return added;
   } catch (e) {
     err.textContent = e.message;
@@ -1250,7 +1303,8 @@ function renderStorage() {
   try { state.tracks = await dbAll(); } catch { toast('Archivio del telefono non disponibile'); }
   sortTracks();
   for (const k of ['playlists', 'queuePl', 'gym']) { try { localStorage.removeItem(k); } catch { /* storage non disponibile */ } }
-  rebuildOrder();
+  if (state.mode === 'one' && state.shuffle) { state.shuffle = false; lsSet('shuffle', false); }   // Loop brano e Casuale si escludono
+  rebuildOrder({ reshuffle: true });
   renderLibrary({ animate: true });
   renderLoop();
   renderShuffle();

@@ -83,6 +83,8 @@ body.dragging #stage,body.dragging #stage::after,body.dragging .player{transitio
 .pill-btn{height:48px;border-radius:14px;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;
   background:var(--glass);border:.5px solid var(--glass-line);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);color:var(--text)}
 .pill-btn:first-child{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+/* Casuale acceso: stesso stato mostrato nel player */
+.pill-btn.on{background:var(--accent-soft);border-color:rgba(168,95,75,.25);color:var(--accent)}
 
 .list{margin:0 -20px}
 .row-wrap{position:relative;overflow:hidden;content-visibility:auto;contain-intrinsic-size:auto 66px}
