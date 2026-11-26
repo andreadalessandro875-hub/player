@@ -89,8 +89,8 @@ function hashHue(s) {
 }
 const fallbackArt = id => {
   const h = hashHue(id);
-  const l = 40 + (h % 6) * 6;
-  return `linear-gradient(135deg, hsl(${h} 6% ${l}%), hsl(${h} 4% ${Math.round(l * 0.42)}%))`;
+  // copertine di riserva in toni tenui, intonati al lino
+  return `linear-gradient(135deg, hsl(${h} 24% 70%), hsl(${(h + 25) % 360} 18% 48%))`;
 };
 const artUrls = new Map();
 function artUrl(t) {
@@ -133,9 +133,10 @@ async function tintFromBlob(blob) {
   } catch { return null; } finally { URL.revokeObjectURL(u); }
 }
 function applyTint(t) {
-  const { h, s } = t.tint || { h: hashHue(t.id), s: 0 };
-  root.style.setProperty('--tint1', `hsl(${h} ${clamp(s, 0, 38)}% 26%)`);
-  root.style.setProperty('--tint2', `hsl(${(h + 24) % 360} ${clamp(s, 0, 30)}% 10%)`);
+  const { h, s } = t.tint || { h: hashHue(t.id), s: 20 };
+  // bagliori chiari e poco saturi, presi dal colore della copertina
+  root.style.setProperty('--tint1', `hsl(${h} ${clamp(s, 12, 38)}% 82%)`);
+  root.style.setProperty('--tint2', `hsl(${(h + 30) % 360} ${clamp(s, 10, 28)}% 88%)`);
 }
 const artData = new Map();
 const blobToDataURL = b => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.onerror = () => r(null); fr.readAsDataURL(b); });
@@ -148,9 +149,8 @@ async function artworkFor(t) {
   const h = hashHue(t.id), c = document.createElement('canvas');
   c.width = c.height = 512;
   const g = c.getContext('2d'), grad = g.createLinearGradient(0, 0, 512, 512);
-  const l = 40 + (h % 6) * 6;
-  grad.addColorStop(0, `hsl(${h} 6% ${l}%)`);
-  grad.addColorStop(1, `hsl(${h} 4% ${Math.round(l * 0.42)}%)`);
+  grad.addColorStop(0, `hsl(${h} 24% 70%)`);
+  grad.addColorStop(1, `hsl(${(h + 25) % 360} 18% 48%)`);
   g.fillStyle = grad;
   g.fillRect(0, 0, 512, 512);
   return [{ src: c.toDataURL('image/png'), sizes: '512x512', type: 'image/png' }];
@@ -300,28 +300,13 @@ const state = {
   ab: { a: null, b: null },
   query: '',
   editing: false,
-  sleepAt: 0,
-  playlists: lsGet('playlists', []),
-  queue: { pl: lsGet('queuePl', null) },   // playlist da cui proviene la coda (null = libreria)
-  plView: null,
-  plEdit: false
+  sleepAt: 0
 };
 const currentTrack = () => state.tracks.find(t => t.id === state.current);
 const sortTracks = () => state.tracks.sort((a, b) => a.title.localeCompare(b.title, 'it', { sensitivity: 'base' }));
 
-function sourceIds() {
-  const all = state.tracks.map(t => t.id), p = getPl(state.queue.pl);
-  if (p) { const ids = p.ids.filter(id => all.includes(id)); if (ids.length) return ids; }
-  state.queue.pl = null;
-  return all;
-}
-function renderSource() {
-  const p = getPl(state.queue.pl);
-  $('#player .eyebrow').textContent = p ? 'DA ' + p.name.toUpperCase() : 'IN RIPRODUZIONE';
-  lsSet('queuePl', p ? p.id : null);
-}
 function rebuildOrder(keepCurrent = true) {
-  const ids = sourceIds();
+  const ids = state.tracks.map(t => t.id);
   if (state.shuffle) {
     for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
     const k = ids.indexOf(state.current);
@@ -390,30 +375,26 @@ let activeView = $('#view-library');
 const ptr = $('#ptr');
 let ptrArmed = false, ptrBusy = false, touching = false, navTick = false;
 
-const VIEW_TITLES = { library: 'Libreria', playlists: 'Playlist', playlist: 'Playlist', gym: 'Palestra', sync: 'Sincronizza' };
+const VIEW_TITLES = { library: 'Libreria', sync: 'Sincronizza' };
 function go(name) {
   const next = $('#view-' + name);
   if (next === activeView) { next.scrollTo({ top: 0, behavior: 'smooth' }); return; }
   closeRow();
-  activeView.classList.remove('active', 'enter', 'enter-r');
+  activeView.classList.remove('active', 'enter');
   next.classList.add('active');
-  next.classList.remove('enter', 'enter-r');
+  next.classList.remove('enter');
   void next.offsetWidth;
-  next.classList.add(name === 'playlist' ? 'enter-r' : 'enter');
+  next.classList.add('enter');
   activeView = next;
-  const tab = name === 'playlist' ? 'playlists' : name;
   $$('.tab').forEach(t => {
-    const on = t.dataset.go === tab;
+    const on = t.dataset.go === name;
     t.classList.toggle('active', on);
     on ? t.setAttribute('aria-current', 'page') : t.removeAttribute('aria-current');
   });
-  $('.tabbar').style.setProperty('--ti', String(['library', 'playlists', 'gym', 'sync'].indexOf(tab)));
-  $('#nav-title').textContent = name === 'playlist' ? (getPl(state.plView)?.name || 'Playlist') : VIEW_TITLES[name];
-  if (name === 'playlist') next.scrollTop = 0;
-  if (name === 'playlists') renderPlaylists({ animate: true });
+  $('.tabbar').style.setProperty('--ti', String(['library', 'sync'].indexOf(name)));
+  $('#nav-title').textContent = VIEW_TITLES[name];
   updateNav();
   if (name === 'sync') renderSync();
-  if (name === 'gym') renderGym();
 }
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-go]');
@@ -441,9 +422,8 @@ libView.addEventListener('touchend', () => {
   if (ptrArmed) { ptrArmed = false; pullSync(); }
 }, { passive: true });
 
-/* ================= Elenchi di brani (libreria e playlist) ================= */
+/* ================= Elenco dei brani ================= */
 const list = $('#track-list');
-const plList = $('#pl-list');
 let openRow = null, lastSwipe = 0;
 const DEL_W = 88;
 
@@ -458,10 +438,6 @@ function rowHtml(t, i, o = {}) {
         <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span class="dur">${t.duration ? fmt(t.duration) : ''}</span>
       </button>
-      ${o.reorder ? `<span class="mv">
-        <button data-mv="up" data-id="${id}" aria-label="Sposta su"${i === 0 ? ' disabled' : ''}>${ICONS.up}</button>
-        <button data-mv="down" data-id="${id}" aria-label="Sposta giù"${i === o.count - 1 ? ' disabled' : ''}>${ICONS.down}</button>
-      </span>` : ''}
       <button class="edit-del" data-del="${id}" aria-label="${del} ${esc(t.title)}"><span></span></button>
     </div>`;
 }
@@ -496,8 +472,6 @@ function bindList(el, cfg) {
   const clearHold = () => { clearTimeout(hold); hold = 0; };
   el.addEventListener('click', e => {
     if (performance.now() - lastSwipe < 350) return;
-    const mv = e.target.closest('[data-mv]');
-    if (mv) { cfg.onMove(mv.dataset.id, mv.dataset.mv); return; }
     const del = e.target.closest('[data-del]');
     if (del) { cfg.onDelete(del.dataset.del); return; }
     const row = e.target.closest('[data-play]');
@@ -585,14 +559,12 @@ $('#btn-edit').addEventListener('click', () => { state.editing = !state.editing;
 $('#btn-playall').addEventListener('click', () => {
   if (!state.tracks.length) return;
   haptic();
-  state.queue.pl = null;
   setShuffle(false, true);
   load(state.order[0]);
 });
 $('#btn-shuffleall').addEventListener('click', () => {
   if (!state.tracks.length) return;
   haptic();
-  state.queue.pl = null;
   state.shuffle = true;
   lsSet('shuffle', true);
   rebuildOrder(false);
@@ -601,9 +573,8 @@ $('#btn-shuffleall').addEventListener('click', () => {
   toast('Riproduzione casuale');
 });
 
-// Avvia un brano scegliendo da dove proviene la coda (libreria o playlist).
-function playFrom(id, plId = null) {
-  state.queue.pl = plId;
+// Avvia un brano: la coda è sempre l'intera libreria.
+function playFrom(id) {
   state.current = id;
   rebuildOrder(true);
   load(id);
@@ -612,18 +583,14 @@ bindList(list, {
   editing: () => state.editing,
   onPlay: id => {
     if (id === state.current) { if (audio.paused) audio.play(); openPlayer(); return; }
-    playFrom(id, null);
+    playFrom(id);
   },
   onDelete: id => deleteTrack(id),
   onHold: async id => {
     const t = state.tracks.find(x => x.id === id);
     if (!t) return;
-    const k = await actionSheet(t.title, [
-      { k: 'pl', label: 'Aggiungi a una playlist…' },
-      { k: 'del', label: 'Elimina dalla libreria', danger: true }
-    ]);
-    if (k === 'pl') addToPlaylistFlow(id);
-    else if (k === 'del') deleteTrack(id);
+    const k = await actionSheet(t.title, [{ k: 'del', label: 'Elimina dalla libreria', danger: true }]);
+    if (k === 'del') deleteTrack(id);
   }
 });
 
@@ -643,272 +610,9 @@ async function deleteTrack(id) {
   await dbDelete(id);
   dropArt(id);
   state.tracks = state.tracks.filter(x => x.id !== id);
-  state.playlists.forEach(p => { p.ids = p.ids.filter(x => x !== id); });
-  savePlaylists();
   rebuildOrder();
   renderLibrary();
-  if (activeView.id === 'view-playlist') renderPlaylistDetail();
   toast('Brano eliminato');
-}
-
-/* ================= Playlist ================= */
-const savePlaylists = () => lsSet('playlists', state.playlists);
-const getPl = id => state.playlists.find(p => p.id === id);
-const plTracks = p => p.ids.map(id => state.tracks.find(t => t.id === id)).filter(Boolean);
-const plCount = n => `${n} ${n === 1 ? 'brano' : 'brani'}`;
-function plMeta(p) {
-  const ts = plTracks(p), min = Math.round(ts.reduce((s, t) => s + (t.duration || 0), 0) / 60);
-  return plCount(ts.length) + (ts.length ? ` · ${Math.max(1, min)} min` : '');
-}
-function plCover(p) {
-  const ts = plTracks(p);
-  if (!ts.length) return `<div class="pl-cover empty">${ICONS.list}</div>`;
-  if (ts.length < 4) return `<div class="pl-cover single">${artNode(ts[0], 'art-fill')}</div>`;
-  return `<div class="pl-cover">${ts.slice(0, 4).map(t => artNode(t, 'art-fill')).join('')}</div>`;
-}
-function pruneLists() {
-  const all = new Set(state.tracks.map(t => t.id));
-  state.playlists.forEach(p => { p.ids = p.ids.filter(id => all.has(id)); });
-  savePlaylists();
-}
-function renderPlaylists({ animate = false } = {}) {
-  const has = state.playlists.length > 0;
-  $('#pl-empty').hidden = has;
-  $('#pl-grid').innerHTML = !has ? '' :
-    `<button class="pl-row pl-new tap" id="row-newpl"><div class="pl-cover empty">${ICONS.plus}</div><span class="row-text"><span class="title" style="color:var(--accent)">Nuova playlist</span></span></button>` +
-    state.playlists.map((p, i) => `
-      <button class="pl-row${animate ? ' in' : ''}${state.queue.pl === p.id && state.current ? ' playing' : ''}" data-pl="${esc(p.id)}" style="--i:${Math.min(i, 14)}">
-        ${plCover(p)}
-        <span class="row-text"><span class="title">${esc(p.name)}</span><span class="sub">${plMeta(p)}</span></span>
-        <span class="pl-chev">${ICONS.chev}</span>
-      </button>`).join('');
-}
-function renderPlaylistDetail({ animate = false } = {}) {
-  const p = getPl(state.plView);
-  if (!p) { go('playlists'); return; }
-  const ts = plTracks(p), has = ts.length > 0;
-  if (!has) state.plEdit = false;
-  $('#pl-title').textContent = p.name;
-  $('#nav-title').textContent = p.name;
-  $('#pl-meta').textContent = plMeta(p);
-  $('#pl-tools').hidden = !has;
-  $('#btn-pl-edit').hidden = !has;
-  $('#btn-pl-edit').textContent = state.plEdit ? 'Fine' : 'Modifica';
-  plList.classList.toggle('editing', state.plEdit);
-  openRow = null;
-  plList.innerHTML = ts.map((t, i) => rowHtml(t, i, { animate, delLabel: 'Rimuovi', reorder: true, count: ts.length })).join('');
-  markPlaying();
-}
-function openPlaylist(id) {
-  state.plView = id;
-  state.plEdit = false;
-  renderPlaylistDetail({ animate: true });
-  go('playlist');
-}
-// Da chiamare dopo ogni modifica al contenuto di una playlist.
-function afterPlaylistChange(id) {
-  savePlaylists();
-  renderPlaylists();
-  if (state.plView === id && activeView.id === 'view-playlist') renderPlaylistDetail();
-  if (state.queue.pl === id) rebuildOrder();
-}
-
-function playPlaylist(id, shuffle) {
-  const p = getPl(id);
-  if (!p || !plTracks(p).length) { toast('La playlist è vuota'); return; }
-  state.queue.pl = id;
-  state.shuffle = shuffle;
-  lsSet('shuffle', shuffle);
-  rebuildOrder(false);
-  renderShuffle();
-  load(state.order[0]);
-  if (shuffle) toast('Riproduzione casuale');
-}
-async function createPlaylist(ids = []) {
-  const name = await promptName({ title: 'Nuova playlist', msg: 'Dai un nome alla playlist.', ok: 'Crea', value: '' });
-  if (name === null) return null;
-  const p = { id: crypto.randomUUID(), name: name || `Playlist ${state.playlists.length + 1}`, ids: [...ids], created: Date.now() };
-  state.playlists.push(p);
-  savePlaylists();
-  renderPlaylists();
-  return p;
-}
-async function newPlaylistFromView() {
-  const p = await createPlaylist();
-  if (!p) return;
-  openPlaylist(p.id);
-  if (state.tracks.length) setTimeout(() => openPicker(p.id), 350);
-}
-$('#btn-newpl').addEventListener('click', () => { haptic(); newPlaylistFromView(); });
-$('#btn-newpl2').addEventListener('click', () => { haptic(); newPlaylistFromView(); });
-$('#pl-grid').addEventListener('click', e => {
-  if (e.target.closest('#row-newpl')) { haptic(); newPlaylistFromView(); return; }
-  const row = e.target.closest('[data-pl]');
-  if (row) { haptic(); openPlaylist(row.dataset.pl); }
-});
-$('#btn-pl-edit').addEventListener('click', () => { state.plEdit = !state.plEdit; haptic(); renderPlaylistDetail(); });
-$('#btn-pl-play').addEventListener('click', () => { haptic(); playPlaylist(state.plView, false); });
-$('#btn-pl-shuffle').addEventListener('click', () => { haptic(); playPlaylist(state.plView, true); });
-$('#btn-pl-add').addEventListener('click', () => { haptic(); openPicker(state.plView); });
-$('#btn-pl-more').addEventListener('click', async () => {
-  const p = getPl(state.plView);
-  if (!p) return;
-  haptic();
-  const k = await actionSheet(p.name, [
-    { k: 'add', label: 'Aggiungi brani' },
-    { k: 'ren', label: 'Rinomina playlist' },
-    { k: 'del', label: 'Elimina playlist', danger: true }
-  ]);
-  if (k === 'add') openPicker(p.id);
-  else if (k === 'ren') {
-    const name = await promptName({ title: 'Rinomina playlist', msg: '', ok: 'Salva', value: p.name });
-    if (name) { p.name = name; savePlaylists(); renderPlaylistDetail(); renderPlaylists(); if (state.queue.pl === p.id) renderSource(); }
-  } else if (k === 'del') {
-    const c = await actionSheet(`Eliminare “${p.name}”? I brani restano nella libreria.`, [{ k: 'ok', label: 'Elimina playlist', danger: true }]);
-    if (c !== 'ok') return;
-    state.playlists = state.playlists.filter(x => x.id !== p.id);
-    savePlaylists();
-    if (state.queue.pl === p.id) { state.queue.pl = null; rebuildOrder(); renderSource(); }
-    go('playlists');
-    toast('Playlist eliminata');
-  }
-});
-bindList(plList, {
-  editing: () => state.plEdit,
-  onPlay: id => {
-    const p = getPl(state.plView);
-    if (!p) return;
-    if (id === state.current && state.queue.pl === p.id) { if (audio.paused) audio.play(); openPlayer(); return; }
-    playFrom(id, p.id);
-  },
-  onDelete: async id => {
-    const p = getPl(state.plView);
-    if (!p) return;
-    await collapseRow($(`#pl-list .row-wrap[data-id="${CSS.escape(id)}"]`));
-    p.ids = p.ids.filter(x => x !== id);
-    afterPlaylistChange(p.id);
-    toast('Rimosso dalla playlist');
-  },
-  onMove: (id, dir) => {
-    const p = getPl(state.plView);
-    if (!p) return;
-    const i = p.ids.indexOf(id), j = dir === 'up' ? i - 1 : i + 1;
-    if (i < 0 || j < 0 || j >= p.ids.length) return;
-    [p.ids[i], p.ids[j]] = [p.ids[j], p.ids[i]];
-    haptic();
-    afterPlaylistChange(p.id);
-  },
-  onHold: async id => {
-    const p = getPl(state.plView), t = state.tracks.find(x => x.id === id);
-    if (!p || !t) return;
-    const k = await actionSheet(t.title, [{ k: 'rm', label: 'Rimuovi dalla playlist', danger: true }]);
-    if (k === 'rm') {
-      await collapseRow($(`#pl-list .row-wrap[data-id="${CSS.escape(id)}"]`));
-      p.ids = p.ids.filter(x => x !== id);
-      afterPlaylistChange(p.id);
-    }
-  }
-});
-
-// Aggiunge (o toglie) un brano da una playlist: dal player o con pressione lunga in libreria.
-async function addToPlaylistFlow(trackId) {
-  if (!trackId) return;
-  const k = await actionSheet('Aggiungi a una playlist', [
-    { k: '__new', label: 'Nuova playlist…' },
-    ...state.playlists.map(p => ({ k: p.id, label: p.name, check: p.ids.includes(trackId) }))
-  ]);
-  if (!k) return;
-  if (k === '__new') {
-    const p = await createPlaylist([trackId]);
-    if (p) toast(`Aggiunto a “${p.name}”`);
-    return;
-  }
-  const p = getPl(k);
-  if (!p) return;
-  if (p.ids.includes(trackId)) { p.ids = p.ids.filter(x => x !== trackId); toast(`Rimosso da “${p.name}”`); }
-  else { p.ids.push(trackId); toast(`Aggiunto a “${p.name}”`); }
-  afterPlaylistChange(p.id);
-}
-$('#btn-addpl').addEventListener('click', () => { haptic(); addToPlaylistFlow(state.current); });
-
-/* ---------- Selettore dei brani da aggiungere ---------- */
-const picker = $('#picker');
-let pk = null;
-function openPicker(plId) {
-  const p = getPl(plId);
-  if (!p) return;
-  if (!state.tracks.length) { toast('Aggiungi prima dei brani alla libreria'); return; }
-  pk = { id: plId, sel: new Set(p.ids) };
-  $('#pk-title').textContent = p.name;
-  $('#pk-list').innerHTML = state.tracks.map(t => `
-    <button class="pick-row${pk.sel.has(t.id) ? ' sel' : ''}" data-id="${esc(t.id)}" role="checkbox" aria-checked="${pk.sel.has(t.id)}">
-      ${artNode(t, 'art-sm')}
-      <span class="row-text"><span class="title">${esc(t.title)}</span><span class="sub">${esc(t.artist)}</span></span>
-      <span class="check">${ICONS.check}</span>
-    </button>`).join('');
-  $('#pk-list').scrollTop = 0;
-  picker.setAttribute('aria-hidden', 'false');
-  void picker.offsetWidth;
-  picker.classList.add('show');
-}
-function closePicker() {
-  if (!pk) return;
-  pk = null;
-  picker.classList.remove('show');
-  picker.setAttribute('aria-hidden', 'true');
-}
-$('#pk-list').addEventListener('click', e => {
-  const r = e.target.closest('.pick-row');
-  if (!r || !pk) return;
-  const id = r.dataset.id, on = !pk.sel.has(id);
-  on ? pk.sel.add(id) : pk.sel.delete(id);
-  r.classList.toggle('sel', on);
-  r.setAttribute('aria-checked', String(on));
-  haptic();
-});
-$('#pk-cancel').addEventListener('click', closePicker);
-$('#pk-done').addEventListener('click', () => {
-  if (!pk) return;
-  const p = getPl(pk.id);
-  if (p) {
-    const kept = p.ids.filter(id => pk.sel.has(id));
-    const added = state.tracks.map(t => t.id).filter(id => pk.sel.has(id) && !p.ids.includes(id));
-    const removed = p.ids.length - kept.length;
-    p.ids = [...kept, ...added];
-    afterPlaylistChange(p.id);
-    haptic();
-    if (added.length) toast(`${added.length} ${added.length === 1 ? 'brano aggiunto' : 'brani aggiunti'}`);
-    else if (removed) toast(`${removed} ${removed === 1 ? 'brano rimosso' : 'brani rimossi'}`);
-  }
-  closePicker();
-});
-
-/* ---------- Dialogo con campo di testo (stile iOS) ---------- */
-const dlg = $('#dlg');
-function promptName({ title, msg, ok, value }) {
-  return new Promise(res => {
-    const form = $('#dlg-form'), inp = $('#dlg-input');
-    $('#dlg-title').textContent = title;
-    $('#dlg-msg').textContent = msg || '';
-    $('#dlg-ok').textContent = ok;
-    inp.value = value || '';
-    dlg.hidden = false;
-    void dlg.offsetWidth;
-    dlg.classList.add('show');
-    setTimeout(() => { inp.focus(); inp.select(); }, 140);
-    const finish = v => {
-      dlg.classList.remove('show');
-      setTimeout(() => { dlg.hidden = true; }, 300);
-      inp.blur();
-      form.onsubmit = null;
-      dlg.onclick = null;
-      $('#dlg-cancel').onclick = null;
-      res(v);
-    };
-    form.onsubmit = e => { e.preventDefault(); finish(inp.value.trim()); };
-    $('#dlg-cancel').onclick = () => finish(null);
-    dlg.onclick = e => { if (e.target === dlg) finish(null); };
-  });
 }
 
 /* ================= Player ================= */
@@ -944,7 +648,6 @@ function startTrack(t, url, { autoplay = true, at = 0, dir = 0 } = {}) {
   if (autoplay) audio.play().catch(() => { /* serve un tocco dell'utente */ });
   if (at > 0) audio.addEventListener('loadedmetadata', () => { audio.currentTime = Math.min(at, audio.duration - 1 || 0); paintProgress(); }, { once: true });
   lastSec = -1;
-  renderSource();
   applyTrackUI(t, dir);
   renderAB();
   markPlaying();
@@ -1292,9 +995,7 @@ $('#btn-timer').addEventListener('click', async () => {
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  if (!dlg.hidden) $('#dlg-cancel').click();
-  else if (sheetDone) sheetDone(null);
-  else if (pk) closePicker();
+  if (sheetDone) sheetDone(null);
   else if (sheetOpen) closePlayer();
 });
 
@@ -1302,7 +1003,6 @@ document.addEventListener('keydown', e => {
 const mini = $('#mini');
 let miniSwipe = 0, my = null;
 function showMini(on) {
-  document.body.classList.toggle('mini-on', !!on);
   if (on) {
     if (!mini.hidden && mini.classList.contains('show')) return;
     mini.hidden = false;
@@ -1567,11 +1267,9 @@ async function renderStorage() {
   initMediaSession();
   try { state.tracks = await dbAll(); } catch { toast('Archivio del telefono non disponibile'); }
   sortTracks();
-  pruneLists();
+  for (const k of ['playlists', 'queuePl', 'gym']) { try { localStorage.removeItem(k); } catch { /* storage non disponibile */ } }
   rebuildOrder();
   renderLibrary({ animate: true });
-  renderPlaylists();
-  renderSource();
   renderLoop();
   renderShuffle();
   renderSleep();

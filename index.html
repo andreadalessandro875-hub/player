@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#000000">
-<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#EFEBE4">
+<meta name="color-scheme" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Loop">
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-180.png?v=19">
+<link rel="apple-touch-icon" href="icons/icon-180.png?v=20">
 <script>document.documentElement.classList.add('booting');setTimeout(function(){document.documentElement.classList.remove('booting')},2500);</script>
-<link rel="stylesheet" href="styles.css?v=19">
+<link rel="stylesheet" href="styles.css?v=20">
 <title>Loop Player</title>
 </head>
 <body>
@@ -22,13 +22,6 @@
   <div class="ambient" aria-hidden="true"></div>
   <div class="statusbar-scrim"></div>
   <div id="navbar" class="navbar" aria-hidden="true"><span id="nav-title">Libreria</span></div>
-  <div id="rest" class="rest" role="timer" aria-label="Recupero" hidden>
-    <svg class="rest-ring" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" class="rr-bg"/><circle id="rest-arc" cx="20" cy="20" r="16" class="rr-fg"/></svg>
-    <div class="rest-text"><span id="rest-label" class="rest-lbl">Recupero</span><strong id="rest-time">0:00</strong></div>
-    <button id="rest-minus" aria-label="Togli 15 secondi">−15</button>
-    <button id="rest-plus" aria-label="Aggiungi 15 secondi">+15</button>
-    <button id="rest-skip" aria-label="Termina il recupero"><span data-icon="close"></span></button>
-  </div>
   <div id="ptr" class="ptr" aria-hidden="true"><span data-icon="spinner"></span></div>
 
   <section id="view-library" class="view active" aria-label="Libreria">
@@ -54,47 +47,6 @@
       <p>Aggiungi brani dal telefono o sincronizza la cartella “Loop Player” di Google Drive.</p>
       <button class="btn primary tap" data-go="sync">Aggiungi brani</button>
     </div>
-  </section>
-
-  <section id="view-playlists" class="view" aria-label="Playlist">
-    <header class="large-title">
-      <h1>Playlist</h1>
-      <button id="btn-newpl" class="icon-link tap" aria-label="Nuova playlist"><span data-icon="plus"></span></button>
-    </header>
-    <div id="pl-grid" class="list"></div>
-    <div id="pl-empty" class="empty" hidden>
-      <div class="empty-ico"><span data-icon="list"></span></div>
-      <h2 class="empty-title">Nessuna playlist</h2>
-      <p>Crea una playlist per raggruppare i brani da ascoltare insieme, anche in loop.</p>
-      <button id="btn-newpl2" class="btn primary tap">Crea playlist</button>
-    </div>
-  </section>
-
-  <section id="view-playlist" class="view" aria-label="Dettaglio playlist">
-    <div class="subbar">
-      <button class="back tap" data-go="playlists"><span data-icon="back"></span>Playlist</button>
-      <div class="subbar-right">
-        <button id="btn-pl-edit" class="link tap">Modifica</button>
-        <button id="btn-pl-more" class="icon-link tap" aria-label="Altre azioni"><span data-icon="more"></span></button>
-      </div>
-    </div>
-    <header class="large-title"><h1 id="pl-title">Playlist</h1></header>
-    <p id="pl-meta" class="pl-meta"></p>
-    <div id="pl-tools" class="quick">
-      <button id="btn-pl-play" class="pill-btn tap"><span data-icon="playSm"></span>Riproduci</button>
-      <button id="btn-pl-shuffle" class="pill-btn tap"><span data-icon="shuffle"></span>Casuale</button>
-    </div>
-    <button id="btn-pl-add" class="add-row tap"><span data-icon="plus"></span>Aggiungi brani</button>
-    <div id="pl-list" class="list reorder"></div>
-  </section>
-
-  <section id="view-gym" class="view" aria-label="Palestra">
-    <header class="large-title">
-      <h1>Palestra</h1>
-      <button id="gym-reset" class="link tap">Azzera</button>
-    </header>
-    <div id="gym-seg" class="seg" role="group" aria-label="Giorno di allenamento"></div>
-    <div id="gym-day"></div>
   </section>
 
   <section id="view-sync" class="view" aria-label="Sincronizza">
@@ -155,8 +107,6 @@
   <nav class="tabbar" aria-label="Navigazione">
     <span class="tab-ind" aria-hidden="true"></span>
     <button class="tab active" data-go="library" aria-current="page"><span data-icon="music"></span><span>Libreria</span></button>
-    <button class="tab" data-go="playlists"><span data-icon="list"></span><span>Playlist</span></button>
-    <button class="tab" data-go="gym"><span data-icon="dumbbell"></span><span>Palestra</span></button>
     <button class="tab" data-go="sync"><span data-icon="sync"></span><span>Sincronizza</span></button>
   </nav>
 </div>
@@ -169,7 +119,6 @@
       <button id="btn-close" class="top-btn tap" aria-label="Chiudi il player"><span data-icon="down"></span></button>
       <span class="eyebrow">IN RIPRODUZIONE</span>
       <div class="top-right">
-        <button id="btn-addpl" class="top-btn tap" aria-label="Aggiungi a una playlist"><span data-icon="listAdd"></span></button>
         <button id="btn-timer" class="top-btn tap" aria-label="Timer di spegnimento"><span data-icon="moon"></span><span id="timer-left" class="timer-left"></span></button>
       </div>
     </div>
@@ -204,30 +153,11 @@
   <button id="as-cancel" class="as-cancel">Annulla</button>
 </div>
 
-<div id="picker" class="picker" role="dialog" aria-modal="true" aria-labelledby="pk-title" aria-hidden="true">
-  <div class="picker-head">
-    <button id="pk-cancel" class="link tap">Annulla</button>
-    <strong id="pk-title">Aggiungi brani</strong>
-    <button id="pk-done" class="link tap bold">Fine</button>
-  </div>
-  <div id="pk-list" class="picker-list"></div>
-</div>
-
-<div id="dlg" class="dlg" hidden>
-  <form id="dlg-form" class="dlg-card" role="dialog" aria-modal="true" aria-labelledby="dlg-title">
-    <h3 id="dlg-title"></h3>
-    <p id="dlg-msg"></p>
-    <input id="dlg-input" maxlength="40" autocomplete="off" enterkeyhint="done" aria-label="Nome della playlist">
-    <div class="dlg-btns"><button type="button" id="dlg-cancel">Annulla</button><button type="submit" id="dlg-ok">Crea</button></div>
-  </form>
-</div>
-
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <label id="haptic" class="haptic" aria-hidden="true"><input type="checkbox" switch tabindex="-1"></label>
 <audio id="audio" preload="auto" playsinline></audio>
 
-<script src="config.js?v=19"></script>
-<script src="app.js?v=19"></script>
-<script src="gym.js?v=19"></script>
+<script src="config.js?v=20"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>
